@@ -53,7 +53,7 @@ ode = {'x': x, 't': w, 'ode': dx_dw, 'p': tf}
 integrator = integrator('integrator', 'cvodes', ode)
 
 # Integration settings
-n_points = 10000 # the parameter influences strongly the results 
+n_points = 1000 # the parameter influences strongly the results 
 w_values = np.linspace(0, 0.98 * Wmax, n_points)  # Use 98% of Wmax like MATLAB
 x_values = []
 
