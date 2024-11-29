@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
 # Discretization
-N = 10  # Number of spatial points
+N = 11  # Number of spatial points
 x = np.linspace(0, 1, N)
 dx = x[1] - x[0]  # Spatial step size
 
