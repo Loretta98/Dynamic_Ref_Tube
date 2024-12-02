@@ -27,7 +27,7 @@ def differentiation_matrix(x):
 
 
 # Discretization
-N =11   # Number of collocation points
+N =51   # Number of collocation points
 collocation_points = legendre_gauss_lobatto(N)  # Scaled to [-1, 1]
 x = 0.5 * (collocation_points + 1)  # Transform to [0, 1]
 
