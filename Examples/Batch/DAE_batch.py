@@ -50,7 +50,7 @@ dae = {
 }
 
 # Time grid for output
-grid = np.linspace(0, 1, 100)  # Time grid from t0=0 to tf=1
+grid = np.linspace(0, 1, 5)  # Time grid from t0=0 to tf=1
 t0 = 0
 # Create integrator
 I = integrator('I', 'idas', dae, {'t0':t0, 'grid': grid})

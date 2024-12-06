@@ -21,7 +21,7 @@ import matplotlib.pyplot as plt
 # Collocation setup
 # -----------------------------------------------------------------------------
 nicp = 1        # Number of (intermediate) collocation points per control interval
-nk = 5          # Control discretization 
+nk = 3          # Control discretization 
 tf = 1          # End time 
 ndstate = 2     # State variables zA,zB
 nastate = 1     # Algebraic state variable zC 
@@ -35,6 +35,7 @@ h = tf/nk/nicp
 
 # Coefficients of the collocation equation 
 C = np.zeros((deg+1,deg+1))
+
 # Coefficients of the continuity equation
 D = np.zeros(deg+1)
 # Collocation point
@@ -54,7 +55,7 @@ for j in range(deg+1):
         if j2 != j:
             L *= (tau-tau_root[j2])/(tau_root[j]-tau_root[j2])
 
-    # Evaluate the polynomial at the final time to get the coefficients of the continuity equation
+    # Evaluate the polynomial at the final time to get the coefficients of the continuity equation sum(Pj(1))
     lfcn = Function('lfcn', [tau],[L])
     D[j] = lfcn(1.0)
 
@@ -346,7 +347,7 @@ nlp = {'x':V, 'f':Obj, 'g':vertcat(*g)}
 # Set options
 opts = {}
 opts["expand"] = True
-opts["ipopt.max_iter"] = 1000
+opts["ipopt.max_iter"] = 1000 
 opts["ipopt.tol"] = 1e-2
 #opts["ipopt.linear_solver"] = 'ma27'
 
