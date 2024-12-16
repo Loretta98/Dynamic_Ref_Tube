@@ -20,7 +20,7 @@ tf = 2          # End time
 L = 1           # Space Domain
 ndstate = 1     # State variables u
 nastate = 0     # Algebraic state variable zC 
-deg = 3 
+deg = 9 
 cp = "radau"
 
 B,C,D,tau_root,h,tau,S = coll_setup(nicp,nk,tf,deg,cp)
@@ -31,11 +31,12 @@ B,C,D,tau_root,h,tau,S = coll_setup(nicp,nk,tf,deg,cp)
 # Constant parameters 
 # State variables 
 t = SX.sym("t")             # Time
-x = SX.sym("x",(deg+1,nk-1))           # Differential state (u) time discretization = n --> n differential states 
+x = SX.sym("x",(deg+1)*(nk))           # Differential state (u) time discretization = n --> n differential states 
 xa = SX.sym("xa",(nk-2))         # ALgebraic state --> continuity equations between each element
-xt = SX.zeros((deg+1,nk-1))         # Differential time derivative 
-xd = SX.zeros((deg+1,nk-1))         # Differential state space derivative 
-xdd = SX.zeros((deg+1,nk-1))       # Differentail state space second derivative 
+xt = SX.zeros((deg+1)*(nk))         # Differential time derivative 
+
+xd = SX.zeros((deg+1)*(nk))         # Differential state space derivative 
+xdd = SX.zeros((deg+1)*(nk))       # Differentail state space second derivative 
 
 p = SX.sym("p",0)           # Symbolic parameter
 u = SX.sym("u",0)           # Control Actions 
@@ -44,26 +45,33 @@ u = SX.sym("u",0)           # Control Actions
 # du1/dt = d2u1/dx2     x [h0,h1]
 
 # Reshape x into a 2D structure for calculations
-x_matrix = reshape(x, deg+1, nk-1)
+#x_matrix = reshape(x, deg+1, nk-1)
 
-for k in range(0, nk-1):
-    for i in range(nicp):
+for k in range(0, nk):
+    print('k',k)
+    for i in range(nicp): 
         for j in range(0, deg+1):
-            for j2 in range(deg+1):
-                xd[j + k * (deg+1)] += C[j2][j] * x_matrix[j2, k]
-                xdd[j + k * (deg+1)] += B[j2][j] * x_matrix[j2, k]
-            if 0 < k < nk-2:
-                xa[k-1] = D[j] * x_matrix[0, k]
+            for j2 in range(0,deg+1):
+                xd[j+k] += C[j2][j] * x[j+k]
+                xdd[j+k] += B[j2][j] * x[j+k]
+    xd[0] = 0 
+    xdd[0] = 0
+    xd[-1] = -np.pi*exp(-t)
+    xdd[-1] = 0 
+    print(xd[0],xdd[0],xd[-1],xdd[-1])
+    if 0 < k < nk-1:
+        xa[k-1] = D[j] * x[k+1]
 
-xt[-1] = xd[-1] - np.pi*np.exp(-t)
-xt[0] = 0 
 alg = xa
-ode  = xt - xdd/np.pi**2
+ode = xt - xdd/np.pi**2
+ode[0] = 0                   # Enforce Dirichlet condition at x=0
+ode[-1] = xd[-1] + np.pi*np.exp(-t)  # Enforce Neumann-like condition at x=1
 
 # The integrator is here recalled for integration of the DAE system 
-space_domain = np.linspace(0, L, (deg+1) * (nk-1))
-u0 = np.ones(np.size(space_domain))*np.sin(np.pi*space_domain)
-time_points = np.linspace(0, tf, 100)  # Intermediate time points
+space_domain = np.linspace(0, L, (deg+1)*(nk))
+u0 = np.sin(np.pi*space_domain)
+n = 100 
+time_points = np.linspace(0, tf,n)  # Intermediate time points
 
 # Correct Implementation of the BC 
 u_results = []  # Store results for all time steps
@@ -71,20 +79,21 @@ current_u = u0 # Initial condition
 
 dae = {
     'x': x,  # Pass flattened x
-    't':t,
-    'z': vertcat(xa),  # Algebraic state remains a vector
+    't': t,
+    'z': alg,  # Algebraic state remains a vector
     'p': vertcat(p),   # Parameters
-    'ode': reshape(xt, (deg+1)*(nk-1),1),  # Flatten ode back to a vector
+    'ode': ode,  # Flatten ode back to a vector
     'alg': alg
 }
 
-integrator = integrator('integrator','idas',dae, {'tf':0.01})
+dt = tf/n
+
+integrator = integrator('integrator','idas',dae, {'tf':dt})
 
 for t in time_points:
     result = integrator(x0=current_u)
-    current_u = result['xf'].full().reshape(-1)  # Flattened result
-    u_matrix = current_u.reshape((deg+1, nk-1))  # Reshape with explicit dimensions
-    u_results.append(u_matrix.flatten())  # Append in flattened form
+    current_u = result['xf'].full().flatten()  # Flattened results
+    u_results.append(current_u)  # Append in flattened form
 
 # Ensure `X`, `T`, and `u_results` are compatible
 X, T = np.meshgrid(space_domain, time_points)  # Match time steps
@@ -100,16 +109,16 @@ ax.set_title('Solution of the PDE over time (Orthogonal Collocation)')
 fig.colorbar(surface, label='u(x, t)')
 plt.show()
 
-# Loop through spatial points and plot evolution over time
-for i in range():
-    ax.plot(time_points[1:], [x[i]] * len(time_points[1:]), u_results[:, i], label=f'u_{i}', alpha=0.8)
+# # Loop through spatial points and plot evolution over time
+# for i in range():
+#     ax.plot(time_points[1:], [x[i]] * len(time_points[1:]), u_results[:, i], label=f'u_{i}', alpha=0.8)
 
-ax.set_xlabel('Time (t)')
-ax.set_ylabel('x')
-ax.set_zlabel('u(x, t)')
-ax.set_title('Evolution of u_i(t) for Each Spatial Point')
-ax.legend(loc='upper left', bbox_to_anchor=(1, 1), title="Spatial Points")
-plt.show()
+# ax.set_xlabel('Time (t)')
+# ax.set_ylabel('x')
+# ax.set_zlabel('u(x, t)')
+# ax.set_title('Evolution of u_i(t) for Each Spatial Point')
+# ax.legend(loc='upper left', bbox_to_anchor=(1, 1), title="Spatial Points")
+# plt.show()
 
 # # For all finite elements
 # for k in range(0,nk-1):

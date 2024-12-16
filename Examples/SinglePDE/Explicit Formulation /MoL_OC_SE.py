@@ -59,6 +59,8 @@ xt[0] = x[0]
 #alg = vertcat(xt[-1], np.pi*np.exp(-t)+xd[-1])
 alg = vertcat() 
 ode  = vertcat(xt-xdd/np.pi**2)
+#ode[0] = 0                   # Enforce Dirichlet condition at x=0
+#ode[-1] = xd[-1] + np.pi*np.exp(-t)  # Enforce Neumann-like condition at x=1
 
 # The integrator is here recalled for integration of the DAE system 
 space_domain = np.linspace(0, L, (deg+1))
