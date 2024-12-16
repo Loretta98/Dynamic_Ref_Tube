@@ -15,10 +15,10 @@ def coll_setup(nicp,nk,L,ndstate,nastate,deg,cp):
     tau = SX.sym("tau")
     # All collocation time points
     tau_root = [0] + collocation_points(deg, cp)    # collocation points for time domain 
-    T = np.zeros((nk,deg+1))                        # time discretization over nk domain points given a deg polynomial grade for the function 
+    S = np.zeros((nk,deg+1))                        # space discretization over nk domain points given a deg polynomial grade for the function 
     for i in range(nk):
         for j in range(deg+1):
-            T[i][j] = h*(i + tau_root[j])
+            S[i][j] = h*(i + tau_root[j])
 
     # For all collocation points: eq 10.4 in Biegler's book
     # Construct Lagrange polynomials to get the polynomial basis at the collocation point --> the lagrange polynomial approximates the differential equation on the finite element
@@ -32,17 +32,6 @@ def coll_setup(nicp,nk,L,ndstate,nastate,deg,cp):
         lfcn = Function('lfcn', [tau],[L])
         D[j] = lfcn(1.0)
 
-        # # Evaluate the first time derivative of the polynomial at all collocation points to get the coefficients of the continuity equation
-        # tfcn = Function('tfcn', [tau],[tangent(L,tau)])
-        # print(tfcn)
-        # for j2 in range(deg+1):
-        #     C[j][j2] = tfcn(tau_root[j2])
-        
-        # # Evaluate the second time derivative of the polynomial at all collocation points to get the coefficients of the continuity equation
-        # tfcn2 = Function('tfcn2', [tau], [tangent(tfcn,tau)])
-        # for j2 in range(deg+1):
-        #     B[j][j2] = tfcn2(tau_root[j2])
-
         # Evaluate the first derivative of the polynomial
         dL_dtau = jacobian(L, tau)
         tfcn = Function('tfcn', [tau], [dL_dtau])
@@ -55,14 +44,14 @@ def coll_setup(nicp,nk,L,ndstate,nastate,deg,cp):
         for j2 in range(deg+1):
             B[j][j2] = tfcn2(tau_root[j2])
 
-    return B,C,D,tau_root,h
+    return B,C,D,tau_root,h,tau,S
 
+def problem_setup(t,x,xa,xd,xdd,u,p,nk,nicp,deg,h,B,C,D,fcn,facn,n,u0): 
 
-def problem_setup(t,xd,xddot,xa,u,p,nk,nicp,deg,h,B,C,D,fcn,facn): 
         # Dimensions of the problem
-    ndiff = xd.nnz()        # number of differential states
+    ndiff = x.nnz()         # number of differential states
     nalg  = xa.nnz()        # number of algebraic states
-    nx = ndiff+nalg          # total number of states
+    nx = ndiff+nalg         # total number of states
     nu = u.nnz()            # number of controls
     NP = p.nnz()            # number of parameters
     # --- Initialization and Bounds over the collocation points ---
@@ -72,27 +61,34 @@ def problem_setup(t,xd,xddot,xa,u,p,nk,nicp,deg,h,B,C,D,fcn,facn):
     u_init = np.array((nk*nicp*(deg+1))) # Initialization of the control actions, even if mantained constants
 
     # Differential state bounds along domain and initial guess 
-    xD_min =  np.array([1.0e-12])
-    xD_max =  np.array([100.0])
-    # Initial conditions
-    xDi_min = np.array([1.0])
-    xDi_max = np.array([1.0])
+    xD_min =  np.ones(ndiff) * [1.0e-12]
+    xD_max =  np.ones(ndiff) * [100.0]
+    # Initial conditions for x=0, u(0,t)=0.0
+    xDi_min = np.array(ndiff) * [0.0]
+    xDi_max = np.array(ndiff) * [0.0]
     # Final conditions
-    xDf_min = np.array([1.0e-12])
-    xDf_max = np.array([100.0])
+    xDf_min = np.ones(ndiff) * [1.0e-12]
+    xDf_max = np.ones(ndiff) * [100.0]
     # Initialization 
-    xD_init = np.array((nk*nicp*(deg+1))*[0.0]) # Initial conditions specified for every time interval 
-    xD_init = np.reshape(xD_init, (-1, ndiff))
+    #xD_init = np.array((nk*nicp*(deg+1)) * [[np.zeros(n)]]) # Initial conditions specified for every time interval 
+    xD_init = np.ones((nk * nicp * (deg + 1), ndiff))*u0
+    #xD_init = np.reshape(xD_init, (-1, ndiff))
     
     # Algebraic state bounds and initial guess
-    xA_min =  np.array([1.0e-12])
-    xA_max =  np.array([100.0])
-    xAi_min = np.array([0.0])
-    xAi_max = np.array([0.0])
-    xAf_min = np.array([1.0e-12])
-    xAf_max = np.array([100.0])
-    xA_init = np.array((nk*nicp*(deg+1))*[0.0])
-    xA_init = np.reshape(xA_init, (-1, ndiff))
+    xA_min =  np.ones(nalg) * [1.0e-12]
+    xA_max =  np.ones(nalg) * [100.0]
+    # xAi_min = np.array([0.0])
+    # xAi_max = np.array([0.0])
+    # xAf_min = np.array([1.0e-12])
+    # xAf_max = np.array([100.0])
+    xA_init = np.zeros((nk * nicp * (deg + 1), nalg))
+    #xA_init = np.array((nk*nicp*(deg+1)))
+    #xA_init = np.reshape(xA_init, (-1, ndiff))
+
+    # Second derivative bounds
+    xDD_min =  np.ones(ndiff) * [1.0e-12]
+    xDD_max =  np.ones(ndiff) * [100.0]
+    xDD_init = np.ones(ndiff) * 0.0
 
     # Parameter bounds and initial guess
     p_min = np.array([])
@@ -107,34 +103,33 @@ def problem_setup(t,xd,xddot,xa,u,p,nk,nicp,deg,h,B,C,D,fcn,facn):
     ic_min = np.array([0.0])
     ic_max = np.array([0.0])
     ic = SX()
-    icfcn = Function("icfcn",[t,xd,xa,u,p],[ic])
+    icfcn = Function("icfcn",[t,x,xa,u,p],[ic])
 
     # Path constraint
     pc_min = np.array([])
     pc_max = np.array([])
     pc = SX()
-    pcfcn = Function("pcfcn",[t,xd,xa,u,p],[pc])
+    pcfcn = Function("pcfcn",[t,x,xa,u,p],[pc])
 
     # Final constraint
     fc_min = np.array([])
     fc_max = np.array([])
-    # fc = -np.exp(-t)
-    fc = -np.exp(-t)                   # du/dx = sum d(Pj)dx x(t) 
-    fcfcn = Function("fcfcn",[t,xd,xa,xddot,u,p],[xddot[-1]-fc])
+    fc = xd[-1]-np.exp(-t)                   # du/dx = sum d(Pj)dx x(t) 
+    fcfcn = Function("fcfcn",[t,xd,x,xa,u,p],[fc])
     
-
     print ('Number of differential states: ', ndiff)
     print ('Number of algebraic states:    ', nalg)
     print ('Number of controls:            ', nu)
     print ('Number of parameters:          ', NP)
 
     # Total number of variables
-    NXD = nicp*nk*(deg+1)*ndiff     # Collocated differential states
-    NXDD = nicp*nk*(deg+1)*ndiff    # Collocated second differential states 
-    NXA = nicp*nk*deg*nalg          # Collocated algebraic states
-    NU  = nk*nu                     # Parametrized controls
-    NXF = ndiff                     # Final state (only the differential states)
-    NV  = NXD+NXA+NU+NXF+NP         # Total number of degrees of freedom
+    NXD = nicp*nk*(deg+1)*ndiff         # Collocated differential states (u0,u1,u2) variabile del sistema 
+    NXA = nicp*nk*deg*nalg              # Collocated algebraic states
+    NU  = nk*nu                         # Parametrized controls
+    NXF = ndiff                         # Final state (only the differential states)
+    NDD = nicp * nk * (deg + 1) * ndiff  # Second derivatives to explicitally recall them from V 
+    NV = NXD + NDD+ NXA + NU + NXF + NP  # Total variables
+    #NV  = NXD+NXA+NU+NXF+NP         # Total number of degrees of freedom
 
     # NLP variable vector
     V = MX.sym("V",NV)
@@ -148,15 +143,17 @@ def problem_setup(t,xd,xddot,xa,u,p,nk,nicp,deg,h,B,C,D,fcn,facn):
     # Get the parameters
     P = V[offset:offset+NP]
     vars_init[offset:offset+NP] = p_init
-    vars_lb[offset:offset+NP] = p_min
-    vars_ub[offset:offset+NP] = p_max
+    vars_lb[offset:offset+NP]   = p_min
+    vars_ub[offset:offset+NP]   = p_max
     offset += NP
 
-    # --- Orthogonal Collocation over variables in the system --- 
-    # Get collocated states and parametrized control
-    XD = np.resize(np.array([],dtype=MX),(nk+1,nicp,deg+1))  # NB: same name as above
-    XA = np.resize(np.array([],dtype=MX),(nk,nicp,deg))      # NB: same name as above
-    U  = np.resize(np.array([],dtype=MX),nk)
+    # --- Orthogonal Collocation over variables in the system ---
+    # Define state variables and bounds
+    XD = np.resize(np.array([], dtype=MX), (nk + 1, nicp, deg + 1))
+    XA = np.resize(np.array([], dtype=MX), (nk, nicp, deg))
+    XDD = np.resize(np.array([], dtype=MX), (nk, nicp, deg + 1))
+    U = np.resize(np.array([], dtype=MX), nk)
+
     for k in range(nk):  
         # Collocated states
         for i in range(nicp):
@@ -164,6 +161,8 @@ def problem_setup(t,xd,xddot,xa,u,p,nk,nicp,deg,h,B,C,D,fcn,facn):
             for j in range(deg+1):
                 # Get the expression for the state vector
                 XD[k][i][j] = V[offset:offset+ndiff]
+                # Add second derivatives
+                XDD[k][i][j] = V[offset:offset + ndiff]
                 if j !=0:
                     XA[k][i][j-1] = V[offset+ndiff:offset+ndiff+nalg]
                 # Add the initial condition
@@ -173,17 +172,29 @@ def problem_setup(t,xd,xddot,xa,u,p,nk,nicp,deg,h,B,C,D,fcn,facn):
                     vars_lb[offset:offset+ndiff] = xDi_min
                     vars_ub[offset:offset+ndiff] = xDi_max                    
                     offset += ndiff
+
+                    vars_init[offset:offset + ndiff] = xDD_init
+                    vars_lb[offset:offset + ndiff] = xDD_min
+                    vars_ub[offset:offset + ndiff] = xDD_max
+                    offset += ndiff
+
                 else:
                     if j!=0: # algebriac states are not calculated at the first collocation point
                         vars_init[offset:offset+ndiff+nalg] = np.append(xD_init[index,:],xA_init[index,:])
                         vars_lb[offset:offset+ndiff+nalg] = np.append(xD_min,xA_min)
                         vars_ub[offset:offset+ndiff+nalg] = np.append(xD_max,xA_max)
-                        offset += ndiff+nalg
+                        offset += 2*ndiff+nalg
                     else:
                         vars_init[offset:offset+ndiff] = xD_init[index,:]
                         vars_lb[offset:offset+ndiff] = xD_min
                         vars_ub[offset:offset+ndiff] = xD_max
                         offset += ndiff
+
+                        vars_init[offset:offset + ndiff] = xDD_init
+                        vars_lb[offset:offset + ndiff] = xDD_min
+                        vars_ub[offset:offset + ndiff] = xDD_max
+                        offset += ndiff
+                        
 
         # Parametrized controls
         U[k] = V[offset:offset+nu]
@@ -193,7 +204,7 @@ def problem_setup(t,xd,xddot,xa,u,p,nk,nicp,deg,h,B,C,D,fcn,facn):
         vars_init[offset:offset+nu] = u_init
         offset += nu
 
-    # State at end time
+    # State at end of the spatial domain
     XD[nk][0][0] = V[offset:offset+ndiff]
     vars_lb[offset:offset+ndiff] = xDf_min
     vars_ub[offset:offset+ndiff] = xDf_max
@@ -223,12 +234,21 @@ def problem_setup(t,xd,xddot,xa,u,p,nk,nicp,deg,h,B,C,D,fcn,facn):
                 for j2 in range (deg+1):
                     xp_jk += C[j2][j]*XD[k][i][j2]          # get the time derivative of the differential states (eq 10.19b)
                     xp_jk2 += B[j2][j]*XD[k][i][j2]         # get the second time derivate of the differential states
+                    xdd = B * x 
+                 # Add second derivative constraints
+                xdd_constraint = XDD[k][i][j] - xp_jk2 / h ** 2
+                g += [xdd_constraint]
+                lbg.append(np.zeros(ndiff))
+                ubg.append(np.zeros(ndiff))
+
                 # Add collocation equations to the NLP
-                [fk] = fcn.call([0., xp_jk/h, xp_jk2/h**2,XD[k][i][j], XA[k][i][j-1], U[k], P])
+                [fk] = fcn.call([0., XDD[k][i][j], XD[k][i][j], XA[k][i][j-1], U[k], P])
+                
                 g += [fk[:ndiff]] 
                 # impose system dynamics (for the differential states (eq 10.19b))
                 lbg.append(np.zeros(ndiff)) # equality constraints
                 ubg.append(np.zeros(ndiff)) # equality constraints
+                
                 if nalg !=0:
                     [fak] = facn.call([0., XD[k][i][j], XA[k][i][j-1], U[k], P])
                     g += [fak[:nalg]]                              # impose system dynamics (for the algebraic states (eq 10.19b))
@@ -258,9 +278,102 @@ def problem_setup(t,xd,xddot,xa,u,p,nk,nicp,deg,h,B,C,D,fcn,facn):
             ubg.append(np.zeros(ndiff))
 
     # Final constraints (Const, dConst, ConstQ)
-    [fck] = fcfcn.call([0., XD[k][i][j], XA[k][i][j-1], U[k], P])
+    [fck] = fcfcn.call([0., xp_jk[-1]/h, XD[k][i][j], XA[k][i][j-1], U[k], P])
     g += [fck]
     lbg.append(fc_min)
     ubg.append(fc_max)
 
-    return V 
+    return V,g,vars_init,vars_lb,vars_ub,lbg,ubg,NP,ndiff,nu,nalg,NXD, NDD
+
+def retrieve_solution(ndiff,deg,nicp,nk,nu,nalg,NP,v_opt,tau,tau_root,h): 
+    ## ----
+    ## RETRIEVE THE SOLUTION
+    ## ---- 
+    xD_opt = np.resize(np.array([],dtype=MX),(ndiff,(deg+1)*nicp*(nk)+1))
+    xA_opt = np.resize(np.array([],dtype=MX),(nalg,(deg)*nicp*(nk)))
+    u_opt  = np.resize(np.array([],dtype=MX),(nu,(deg+1)*nicp*(nk)+1))
+    p_opt  = np.resize(np.array([],dtype=MX),(NP,1))
+
+    offset = 0
+    offset2 = 0
+    offset3 = 0
+    offset4 = 0
+
+    # Retrieve the parameter
+    p_opt = v_opt[:NP][:,0]
+    offset += NP    
+
+    # Retrieve differential, algebraic and control variables
+    for k in range(nk):  
+        for i in range(nicp):
+            for j in range(deg+1):
+                xD_opt[:,offset2] = v_opt[offset:offset+ndiff][:,0]
+                offset2 += 1
+                offset += ndiff
+                if j!=0:
+                    xA_opt[:,offset4] = v_opt[offset:offset+nalg][:,0]
+                    offset4 += 1
+                    offset += nalg
+        utemp = v_opt[offset:offset+nu][:,0]
+        for i in range(nicp):
+            for j in range(deg+1):
+                u_opt[:,offset3] = utemp
+                offset3 += 1
+        #    u_opt += v_opt[offset:offset+nu]
+        offset += nu
+        
+    xD_opt[:,-1] = v_opt[offset:offset+ndiff][:,0]    
+
+
+        
+    # The algebraic states are not defined at the first collocation point of the finite elements:
+    # with the polynomials we compute them at that point
+    Da = np.zeros(deg)
+    for j in range(1,deg+1):
+        # Lagrange polynomials for the algebraic states: exclude the first point
+        La = 1
+        for j2 in range(1,deg+1):
+            if j2 != j:
+                La *= (tau-tau_root[j2])/(tau_root[j]-tau_root[j2])
+        lafcn = Function("lafcn", [tau], [La])
+    # lafcn.init()
+    # lafcn.setInput(tau_root[0])
+        #lafcn.evaluate()
+        Da[j-1] = lafcn(tau_root[0])
+
+    xA_plt = np.resize(np.array([],dtype=MX),(nalg,(deg+1)*nicp*(nk)+1))
+    offset4=0
+    offset5=0
+    for k in range(nk):  
+        for i in range(nicp):
+            for j in range(deg+1):
+                if j!=0:         
+                    xA_plt[:,offset5] = xA_opt[:,offset4]
+                    offset4 += 1
+                    offset5 += 1
+                else:
+                    xa0 = 0
+                    for j in range(deg):
+                        xa0 += Da[j]*xA_opt[:,offset4+j]
+                    xA_plt[:,offset5] = xa0
+                    #xA_plt[:,offset5] = xA_opt[:,offset4]
+                    offset5 += 1
+
+    xA_plt[:,-1] = xA_plt[:,-2]    
+        
+    # Construct the time grid    
+    tg = np.array(tau_root)*h
+    for k in range(nk*nicp):
+        if k == 0:
+            tgrid = tg
+        else:
+            tgrid = np.append(tgrid,tgrid[-1]+tg)
+    tgrid = np.append(tgrid,tgrid[-1])
+
+    # Print parameter
+    if NP!=0:
+        print ('optimal parameter: ', float(p_opt))
+
+    #for k in range(nk*nicp):
+    print ('xd(0) =', xD_opt[0,:] )
+    return 

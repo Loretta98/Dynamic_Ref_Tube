@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
 # Discretization
-N = 11  # Number of spatial points
+N =   101 # Number of spatial points
 x = np.linspace(0, 1, N)
 dx = x[1] - x[0]  # Spatial step size
 
@@ -18,12 +18,12 @@ u0 = np.sin(np.pi * x)
 
 # Symbolic variables
 t = SX.sym('t')          # Time
-u = SX.sym('u', N)       # Variable along spatial domain
+u = SX.sym('u', N)       # Variable along spatial domain --> N number of equations 
 
 # PDE -> ODEs using finite differences
 dudt = SX.zeros(N)  # Initialize time derivative array
 
-# Interior points (finite difference for second derivative)
+# Interior points (finite difference for second derivative) --> explicit expression 
 for i in range(1, N - 1):
     dudt[i] = (u[i+1] - 2*u[i] + u[i-1]) / dx**2
 
@@ -43,18 +43,14 @@ t_values = np.arange(0, T_end, dt)
 u_results = [u0]
 current_u = u0
 
-# for t in t_values[1:]:
-#     result = integrator(x0=current_u)
-#     current_u = result['xf']
-#     u_results.append(current_u.full().flatten())
-
+# This is the step in which I am discretizing the time integration as multiple shooting in ordern to ensure the BC 
 # Correct Implementation of the BC 
 for t in t_values[1:]:
     result = integrator(x0=current_u)
     current_u = result['xf']
     current_u[0] = 0  # Apply Dirichlet BC at x = 0
     current_u[-1] = current_u[-2] - dx * np.pi * np.exp(-t)  # Apply Neumann BC at x = 1
-    u_results.append(current_u.full().flatten())
+    u_results.append(current_u.full().flatten()) 
 
 # Convert results to numpy array
 u_results = np.array(u_results)
@@ -73,6 +69,23 @@ fig.colorbar(surface, label='u(x, t)')
 plt.figure()
 plt.scatter(x,u_results[-1])
 plt.plot(x,np.exp(-t_values[-1])*np.sin(np.pi*x))
+
+# Plot each u_i(t) as a line in the 3D plot
+fig = plt.figure(figsize=(10, 8))
+ax = fig.add_subplot(111, projection='3d')
+
+# Loop through spatial points and plot evolution over time
+for i in range(N):
+    ax.plot(t_values, [x[i]] * len(t_values), u_results[:, i], label=f'u_{i}', alpha=0.8)
+
+ax.set_xlabel('Time (t)')
+ax.set_ylabel('x')
+ax.set_zlabel('u(x, t)')
+ax.set_title('Evolution of u_i(t) for Each Spatial Point')
+ax.legend(loc='upper left', bbox_to_anchor=(1, 1), title="Spatial Points")
+
 plt.show()
+
+
 
 
