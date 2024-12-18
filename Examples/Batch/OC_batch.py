@@ -270,7 +270,7 @@ for k in range(nk):
             xp_jk = 0
             for j2 in range (deg+1):
                 xp_jk += C[j2][j]*XD[k][i][j2]       # get the time derivative of the differential states (eq 10.19b)
-            
+                
             # Add collocation equations to the NLP
             [fk] = ffcn.call([0., xp_jk/h, XD[k][i][j], XA[k][i][j-1], U[k], P])
             g += [fk[:ndiff]] 

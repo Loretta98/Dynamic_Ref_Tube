@@ -16,50 +16,63 @@ time_points = np.linspace(0, T_end, num_time_steps + 1)
 # Initial condition: u(x, 0) = sin(pi * x)
 u0 = np.sin(np.pi * x)
 
-# Symbolic variables
+# PDE parameters
+pi_sq = np.pi**2
+
+# Symbolic variables for solving implicit system
 u_n1 = SX.sym('u_n1', N)  # Solution at time n+1
 u_n = SX.sym('u_n', N)    # Solution at time n (previous step)
+t_sym = SX.sym('t')       # Time variable for boundary condition
 
-# PDE -> ODEs using finite differences
-dudt = SX.zeros(N)  # Initialize time derivative array
+# Residual array
+residual = SX.zeros(N)
 
 # Interior points (finite difference for second derivative)
 for i in range(1, N - 1):
-    dudt[i] = (u_n1[i+1] - 2*u_n1[i] + u_n1[i-1]) / dx**2
+    residual[i] = (u_n1[i] - u_n[i]) - dt * (
+        (u_n1[i+1] - 2 * u_n1[i] + u_n1[i-1]) / dx**2
+    )
 
 # Boundary conditions
-dudt[0] = 0  # Dirichlet BC at x = 0: u(0, t) = 0
-dudt[-1] = (u_n1[-1] - u_n1[-2]) / dx + np.pi * exp(-dt * num_time_steps)  # Neumann BC at x = 1
+# Dirichlet BC at x = 0: u(0, t) = 0
+residual[0] = u_n1[0]
 
-# Backward Euler system
-residual = (u_n1 - u_n) - dt*dudt/(np.pi**2)
+# Neumann BC at x = 1: du/dx = -pi * exp(-t)
+residual[-1] = (
+    (u_n1[-1] - u_n1[-2]) / dx
+    + np.pi * exp(-t_sym)
+)
 
 # Define the residual as a CasADi function
-residual_function = Function('residual', [u_n1, u_n], [residual])
+residual_function = Function('residual', [u_n1, u_n, t_sym], [residual])
 
 # Create the solver for the implicit equation
-solver = rootfinder('solver', 'newton', {'x': u_n1, 'p': u_n, 'g': residual})
+solver = rootfinder('solver', 'newton', {'x': u_n1, 'p': vertcat(u_n, t_sym), 'g': residual})
 
 # Time stepping loop
 u_current = u0  # Initial condition
 solution = [u0]  # Store the solution for each time step
 
 for t in time_points[1:]:
-    u_next = solver(p=u_current)
-    #u_current = u_next.full().flatten()  # Update current solution
-    #u_current = u_next['x'].flatten()  # Extract solution and flatten it
-    u_current = np.array(u_next['x']).flatten()  # Convert to NumPy array and flatten
-
+    # Solve for u_next
+    u_next = solver(p=DM(np.hstack((u_current, t))))  # Ensure compatibility with CasADi
+    u_current = np.array(u_next).flatten()  # Update current solution
     solution.append(u_current)
-
+    
 # Convert solution to array for plotting
 solution = np.array(solution)
 
+# Plot the final solution and analytical solution at T_end
 plt.figure()
-plt.scatter(x,solution[-1])
-plt.plot(x,np.exp(-time_points[-1])*np.sin(np.pi*x))
+plt.plot(x, solution[-1], 'o-', label='Numerical Solution')
+plt.plot(x, np.exp(-time_points[-1]) * np.sin(np.pi * x), 'r--', label='Analytical Solution')
+plt.xlabel('x')
+plt.ylabel('u(x, t)')
+plt.title('Backward Euler Solution at T_end')
+plt.legend()
+plt.show()
 
-# Plot the solution
+# Plot the solution over time
 X, T = np.meshgrid(x, time_points)
 fig = plt.figure(figsize=(10, 8))
 ax = fig.add_subplot(111, projection='3d')

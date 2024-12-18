@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Discretization
-N = 101  # Number of spatial points
+N = 10  # Number of spatial points
 x = np.linspace(0, 1, N)
 dx = x[1] - x[0]  # Spatial step size
 

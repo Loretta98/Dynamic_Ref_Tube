@@ -23,7 +23,7 @@ nastate = 0     # Algebraic state variable zC
 deg = 9 
 cp = "radau"
 
-B,C,D,tau_root,h,tau,S = coll_setup(nicp,nk,tf,deg,cp)
+B,C,D,tau_root,h,tau,S = coll_setup(nicp,nk,L,deg,cp)
 
 # -----------------------------------------------------------------------------
 # Model setup
@@ -46,26 +46,33 @@ u = SX.sym("u",0)           # Control Actions
 
 # Reshape x into a 2D structure for calculations
 #x_matrix = reshape(x, deg+1, nk-1)
-
+# Reshape x into a matrix [nk elements x (deg+1) collocation points]
+alg = []
 for k in range(0, nk):
     print('k',k)
     for i in range(nicp): 
-        for j in range(0, deg+1):
+        for j in range(1, deg+1):
+            xd = 0 
+            xdd = 0 
             for j2 in range(0,deg+1):
-                xd[j+k] += C[j2][j] * x[j+k]
-                xdd[j+k] += B[j2][j] * x[j+k]
+                xd += C[j2][j] * x[j2+k]
+                xdd += B[j2][j] * x[j2+k]
+    xd = xd/h
+    xdd = xdd/h**2
     xd[0] = 0 
     xdd[0] = 0
     xd[-1] = -np.pi*exp(-t)
     xdd[-1] = 0 
     print(xd[0],xdd[0],xd[-1],xdd[-1])
+    # if 0 < k < nk-1:
+    #     xa[k-1] = D[j] * x[k+1]
     if 0 < k < nk-1:
-        xa[k-1] = D[j] * x[k+1]
+        alg = vertcat(alg, D[j] * x[k+1])
 
-alg = xa
+#alg = xa
 ode = xt - xdd/np.pi**2
-ode[0] = 0                   # Enforce Dirichlet condition at x=0
-ode[-1] = xd[-1] + np.pi*np.exp(-t)  # Enforce Neumann-like condition at x=1
+ode[0] = 0                              # Enforce Dirichlet condition at x=0
+ode[-1] = xd[-1] + np.pi*np.exp(-t)     # Enforce Neumann-like condition at x=1
 
 # The integrator is here recalled for integration of the DAE system 
 space_domain = np.linspace(0, L, (deg+1)*(nk))
@@ -93,11 +100,14 @@ integrator = integrator('integrator','idas',dae, {'tf':dt})
 for t in time_points:
     result = integrator(x0=current_u)
     current_u = result['xf'].full().flatten()  # Flattened results
+    current_u[0] = 0  # Apply Dirichlet BC at x = 0
+    current_u[-1] = current_u[-2] - h * np.pi * np.exp(-t)  # Apply Neumann BC at x = 1
     u_results.append(current_u)  # Append in flattened form
 
 # Ensure `X`, `T`, and `u_results` are compatible
 X, T = np.meshgrid(space_domain, time_points)  # Match time steps
 u_results = np.array(u_results).reshape(len(time_points), len(space_domain))
+
 # 3D Surface Plot
 fig = plt.figure(figsize=(10, 8))
 ax = fig.add_subplot(111, projection='3d')
