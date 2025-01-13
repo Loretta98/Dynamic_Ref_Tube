@@ -1,42 +1,81 @@
 # Properties for the catalytic tube 
 import numpy as np 
+from casadi import* 
 
-def Kinetics(T, R, kr_list, Pi, RhoC, Epsilon): 
-    #####################################################################################################
+def Kinetics(T, R, Pi, RhoC, Epsilon,N): 
+#####################################################################################################
 ########################## Kinetic Costant and Rate of reaction (Xu-Froment)#########################
 #####################################################################################################
-
+    
+    rj = SX.zeros((3,N)) # defined as a matrix 
     # CH4 + H2O -> CO + 3 H2 ; CO + H2O -> CO2 + H2 ; CH4 + 2H2O +> CO2 + 4H2
 
     # Equilibrium constants fitted from Nielsen in [bar]
     gamma = np.array([[-757.323e5, 997.315e3, -28.893e3, 31.29], [-646.231e5, 563.463e3, 3305.75,-3.466]]) #[bar^2], [-]
-    Keq1 = np.exp(gamma[0,0]/(T**3)+gamma[0,1]/(T**2)+gamma[0,2]/T + gamma[0,3])
-    Keq2 = np.exp(gamma[1,0]/(T**3)+gamma[1,1]/(T**2)+gamma[1,2]/T + gamma[1,3])
+    Keq1 = exp(gamma[0,0]/(T**3)+gamma[0,1]/(T**2)+gamma[0,2]/T + gamma[0,3])
+    Keq2 = exp(gamma[1,0]/(T**3)+gamma[1,1]/(T**2)+gamma[1,2]/T + gamma[1,3])
     Keq3 = Keq1*Keq2
+    # Dimenione N 
 
     # Arrhenius     I,       II,        III
     Tr_a = 648                                                                          # K 
     Tr_b = 823                                                                          # K 
     k0 = np.array([1.842e-4, 7.558,     2.193e-5])                                      # pre exponential factor @648 K kmol/bar/kgcat/h
     E_a = np.array([240.1,   67.13,     243.9])                                         # activation energy [kJ/mol]
-    kr = k0*np.exp(-(E_a*1000)/R*(1/T-1/Tr_a))
-    #kr_list.append(kr)
+    kr = SX.zeros((3,N))
+    for i in range(3): 
+        kr[i,:] = k0[i]*exp(-(E_a[i]*1000)/R*(1/T-1/Tr_a))
+    # Dimensione N 
+
     # Van't Hoff    CO,     H2,         CH4,    H2O
     K0_a = np.array([40.91,   0.0296])                                      # pre exponential factor @648 K [1/bar]
     DH0_a = np.array([-70.65, -82.90])                                      # adsorption enthalpy [kJ/mol]
     K0_b = np.array([0.1791, 0.4152])                                       # pre exponential factor @823 K [1/bar, -]
-
     DH0_b = np.array([-38.28,  88.68])                                # adsorption enthalpy [kJ/mol]
+    Kr_a = SX.zeros((2,N))
+    for i in range(2):
+        Kr_a[i,:] = K0_a[i]*exp(-(DH0_a[i]*1000)/R*(1/T-1/Tr_a))
+    Kr_b = SX.zeros((2,N))
+    for i in range(2):
+        Kr_b[i,:] = K0_b[i]*exp(-(DH0_b[i]*1000)/R*(1/T-1/Tr_b))
     
-    Kr_a = K0_a*np.exp(-(DH0_a*1000)/R*(1/T-1/Tr_a))
-    Kr_b = K0_b*np.exp(-(DH0_b*1000)/R*(1/T-1/Tr_b))
     #   CO, H2, CH4, H2O
-    Kr = np.concatenate((Kr_a,Kr_b)) # [1/bar] unless last one [-]
+    #Kr = np.concatenate((Kr_a,Kr_b)) # [1/bar] unless last one [-]
+    Kr = vertcat(Kr_a, Kr_b)  # Combined adsorption constants [1/bar]
     # Components  [CH4, CO, CO2, H2, H2O, O2, N2]
-    DEN = 1 + Kr[0]*Pi[1] + Kr[1]*Pi[3] + Kr[2]*Pi[0] + Kr[3]*Pi[4]/Pi[3]
-    rj = np.array([ (kr[0]/Pi[3]**(2.5)) * (Pi[0]*Pi[4]-(Pi[3]**3)*Pi[1]/Keq1) / DEN**2 , (kr[1]/Pi[3]) * (Pi[1]*Pi[4]-Pi[3]*Pi[2]/Keq2) / DEN**2 , (kr[2]/Pi[3]**(3.5)) * (Pi[0]*(Pi[4]**2)-(Pi[3]**4)*Pi[2]/Keq3) / DEN**2 ]) * RhoC * (1-Epsilon)  # kmol/m3/h
+    # Dimensione N 
     
-    return rj,kr
+    # Pi deve avere dimnesione N --> ce l'ha 
+
+    # Denominator for reaction rates (DEN)
+    DEN = (
+        1
+        + Kr[0] * Pi[:, 1]  # CO
+        + Kr[1] * Pi[:, 3]  # H2
+        + Kr[2] * Pi[:, 0]  # CH4
+        + Kr[3] * Pi[:, 4] / Pi[:, 3]  # H2O / H2
+    )  # [N]
+
+    # Reaction rates (rj)
+    rj[0, :] = (
+        (kr[0] / Pi[:, 3]**2.5)  # Reaction 1 rate
+        * (Pi[:, 0] * Pi[:, 4] - (Pi[:, 3]**3) * Pi[:, 1] / Keq1) 
+        / DEN**2
+    )
+    rj[1, :] = (
+        (kr[1] / Pi[:, 3])  # Reaction 2 rate
+        * (Pi[:, 1] * Pi[:, 4] - Pi[:, 3] * Pi[:, 2] / Keq2) 
+        / DEN**2
+    )
+    rj[2, :] = (
+        (kr[2] / Pi[:, 3]**3.5)  # Reaction 3 rate
+        * (Pi[:, 0] * Pi[:, 4]**2 - (Pi[:, 3]**4) * Pi[:, 2] / Keq3) 
+        / DEN**2
+    )
+    # Multiply by catalyst density and void fraction correction
+    rj *= RhoC * (1 - Epsilon)  # [kmol/m3/h]
+
+    return rj, kr
 
 def HeatTransfer(T,Tc,n_comp, MW, Pc, yi, Cpmix, RhoGas,dTube, Dp, Epsilon, e_w, u, dTube_out, lambda_s): 
     ######################################################################################################
@@ -57,13 +96,16 @@ def HeatTransfer(T,Tc,n_comp, MW, Pc, yi, Cpmix, RhoGas,dTube, Dp, Epsilon, e_w,
 
     # Wassiljewa equation for low-pressure gas viscosity with Mason and Saxena modification 
     k_i     = a + b*T + c*T**2                                                                      # thermal conductivity of gas [W/m/K]
+    # Dimensione N 
     A_matrix = np.identity(n_comp)
     thermal_conductivity_array = np.zeros(n_comp)
     
     Gamma = 210*(Tc*MW**3/Pc**4)**(1/6)     # reduced inverse thermal conductivity [W/mK]^-1
+    # Dimension n_comp
     Tr = T/Tc
     k = (np.exp(0.0464*Tr)-np.exp(-0.2412*Tr))
-    
+    # Dimensione N 
+
     for i in range(0,n_comp-1):
         for j in range(i+1,n_comp): 
             A_matrix[i,j] = ( 1+ ((Gamma[j]*k[i])/(Gamma[i]*k[j]))**(0.5) * (MW[j]/MW[i])**(0.25) )**2 / ( 8*(1 + MW[i]/MW[j])**(0.5) )
@@ -79,6 +121,8 @@ def HeatTransfer(T,Tc,n_comp, MW, Pc, yi, Cpmix, RhoGas,dTube, Dp, Epsilon, e_w,
         num = yi[i]*k_i[i]
         thermal_conductivity_array[i] = num/den 
     lambda_gas   = sum(thermal_conductivity_array)                                                        # Thermal conductivity of the mixture [W/m/K]
+    # Deve avere dimensione N 
+
     # K_gas = 0.9
     # Wilke Method for low-pressure gas viscosity   
     mu_i    = (A + B*T + C*T**2)*1e-7                                                               # viscosity of gas [micropoise]
@@ -99,12 +143,13 @@ def HeatTransfer(T,Tc,n_comp, MW, Pc, yi, Cpmix, RhoGas,dTube, Dp, Epsilon, e_w,
         dynamic_viscosity_array[i] = num/den 
     
     DynVis  = sum(dynamic_viscosity_array)                                                  # Dynamic viscosity [kg/m/s]
+    # Deve avere dimensione N 
 
     Pr = Cpmix*DynVis/lambda_gas                                                            # Prandtl number
     Re = RhoGas * u * Dp / DynVis                                                        # Reynolds number []
 
     #h_t = K_gas/Dp*(2.58*Re**(1/3)*Pr**(1/3)+0.094*Re**(0.8)*Pr**(0.4))                     # Convective coefficient tube side [W/m2/K]
-    h_t = 833.77    # Pantoleontos
+    #h_t = 833.77    # Pantoleontos
 
     # Overall transfer coefficient in packed beds, Dixon 1996 
     eps = 0.9198/((dTube/Dp)**2) + 0.3414
@@ -115,11 +160,74 @@ def HeatTransfer(T,Tc,n_comp, MW, Pc, yi, Cpmix, RhoGas,dTube, Dp, Epsilon, e_w,
     lambda_er = lamba_er_o+0.11*lambda_gas*Re*Pr**(1/3)/(1+46*(Dp/dTube_out)**2)            # effective radial conductivity [W/m/K]
     Bi = aw*dTube_out/2/lambda_er
     U = 1 / ( 1/aw + dTube_out/6/lambda_er)*((Bi+3)/(Bi+4))                                 # J/m2/s/K = W/m2/K
-    h_env = 0.1                                                                             # Convective coefficient external environment [W/m2/K]
-    Thick = 0.01 
+    # Deve avere dimensione N 
+
     return U,lambda_gas,DynVis 
 
-def Diffusivity(R,T,P,yi, n_comp, MW, MWmix, e_s, tau): 
+def Diffusivity(R, T, P, yi, n_comp, MW, MWmix, e_s, tau, N):
+    ###########################################################################################################
+    ######################################## Particle balance #################################################
+    ###########################################################################################################
+
+    # Initialize symbolic matrices
+    Dij = SX.zeros((n_comp, n_comp))  # Binary diffusion coefficients
+    DMi = SX.zeros((N, n_comp))      # Molecular diffusion coefficients
+    Dki = SX.zeros((N, n_comp))      # Knudsen diffusion coefficients
+
+    k_boltz = 1.380649 * 1e-23  # Boltzmann constant [m2 kg / K / s2]
+    
+    # Lennard-Jones parameters
+    sigma = SX([3.758, 3.690, 3.941, 2.827, 2.641])  # [Angstrom]
+    epsi = SX([148.6, 91.7, 195.2, 59.7, 809.1])     # [K]
+    dip_mom = SX([0.0, 0.1, 0.0, 0.0, 1.8])          # [debye]
+
+    # Calculate delta and Brokaw corrections
+    Vb = SX([8.884, 6.557, 14.94, 1.468, 20.36]) * 1e3  # [cm^3/mol]
+    Tb = SX([-161.4, -190.1, -87.26, -253.3, 99.99]) + 273.15  # [K]
+    delta = 1.94 * 1e3 * dip_mom**2 / (Vb * Tb)
+    sigma = ((1.58 * Vb) / (1 + 1.3 * delta**2))**(1/3)
+    epsi = 1.18 * (1 + 1.3 * delta**2) * Tb
+
+    # Loop over spatial points
+    for k in range(N):
+        T_k = T[k]  # Temperature at spatial point k
+        P_k = P[k]
+        for i in range(n_comp - 1):
+            for j in range(i + 1, n_comp):
+                epsi_ij = sqrt(epsi[i] * epsi[j])
+                T_a = T_k / epsi_ij
+                delta_ij = sqrt(delta[i] * delta[j])
+                omega_d = (
+                    1.06036 / T_a**0.15610
+                    + 0.193 / exp(0.47635 * T_a)
+                    + 1.03587 / exp(1.52996 * T_a)
+                    + 1.76474 / exp(3.89411 * T_a)
+                )
+                omega_d += 0.19 * delta_ij**2 / T_a
+                sigma_ij = sqrt(sigma[i] * sigma[j])
+                M_ij = 2 / ((1 / MW[i]) + (1 / MW[j]))
+                n = (3.03 - (0.98 / sqrt(M_ij)))/ 1000
+                Dij[i, j] = (n * T_k**(1.5)) / (P_k * sqrt(M_ij) * sigma_ij**2 * omega_d) # Ensure scalar
+                Dij[j, i] = Dij[i, j]  # Symmetric
+
+        # Calculate molecular and Knudsen diffusion coefficients
+        pore_radius = 1e-8  # [cm]
+        for i in range(n_comp):
+            Dmi_k = sum1(yi[k, :].T / Dij[i, :].T)  # Summation for molecular diffusion
+            DMi[k, i] = (1 - yi[k, i]) / Dmi_k
+            Dki[k, i] = 9700 * pore_radius * sqrt(T_k / MW[i])
+
+    # Effective diffusivity
+    pore_diameter = 130 * 1e-8  # [cm]
+    Dki_eff = pore_diameter / 3 * sqrt(8 * R * T / (MWmix / 1e3) / 3.14159)
+    Deff = 1 / ((e_s / tau) * (1 / DMi + 1 / Dki_eff))
+
+    return Deff
+
+
+
+
+def Diffusivity1(R,T,P,yi, n_comp, MW, MWmix, e_s, tau,N): 
     ###########################################################################################################
     ######################################## Particle balance #################################################
     ###########################################################################################################
@@ -146,27 +254,33 @@ def Diffusivity(R,T,P,yi, n_comp, MW, MWmix, e_s, tau):
     delta = np.array(1.94*1e3*dip_mom**2)/Vb/Tb    # Chapman-Enskog with Brokaw correction with polar gases 
     sigma = ((1.58*Vb)/(1+1.3*delta**2))**(1/3)     # Chapman-Enskog with Brokaw correction with polar gases 
     epsi = 1.18*(1+1.3*delta**2)*Tb                 # Chapman-Enskog with Brokaw correction with polar gases
+    DMi = SX.zeros((N,n_comp))
 
-    for i in range(0,n_comp-1):
-        for j in range(i+1,n_comp):
-            epsi_ij = (epsi[i]*epsi[j])**0.5
-            T_a = T / epsi_ij
-            delta_ij = (delta[i]*delta[j])**0.5  
-            omega_d = 1.06036/(T_a**0.15610) + 0.193/(np.exp(0.47635*T_a)) + 1.03587/(np.exp(1.52996*T_a)) + 1.76474/(np.exp(3.89411*T_a)) # diffusion collision integral [-] lennard-jones
-            omega_d = omega_d +0.19*delta_ij**2/T_a                 # Chapman-Enskog with Brokaw correction with polar gases 
-            #sigma_ij = (sigma[i] + sigma[j]) / 2 
-            sigma_ij = (sigma[i]*sigma[j])**0.5
-            M_ij = 2* 1/ ((1/MW[i])+(1/MW[j]))
-            Dij[i,j] =  ( (3.03 - (0.98/M_ij**0.5))/1000 * T**(3/2) ) / (P*M_ij**0.5 *sigma_ij**2*omega_d)  # cm2/s
-            Dij[j,i] = Dij[i,j]
+    for k in range(0,N): 
+        T = T[k]
+        for i in range(0,n_comp-1):
+            for j in range(i+1,n_comp):
+                epsi_ij = (epsi[i]*epsi[j])**0.5
+                T_a = T / epsi_ij
+                # Dimensione N 
+                delta_ij = (delta[i]*delta[j])**0.5  
+                omega_d = 1.06036/(T_a**0.15610) + 0.193/(np.exp(0.47635*T_a)) + 1.03587/(np.exp(1.52996*T_a)) + 1.76474/(np.exp(3.89411*T_a)) # diffusion collision integral [-] lennard-jones
+                omega_d = omega_d +0.19*delta_ij**2/T_a                 # Chapman-Enskog with Brokaw correction with polar gases 
+                #sigma_ij = (sigma[i] + sigma[j]) / 2 
+                sigma_ij = (sigma[i]*sigma[j])**0.5
+                M_ij = 2* 1/ ((1/MW[i])+(1/MW[j]))
+                Dij[i,j] =  ( (3.03 - (0.98/M_ij**0.5))/1000 * T**(3/2) ) / (P*M_ij**0.5 *sigma_ij**2*omega_d)  # cm2/s
+                Dij[j,i] = Dij[i,j]
 
-    pore_radius = 1e-8  # pore radius in cm
-    den = 0
-    for i in range(0,n_comp):
-        for j in range(0,n_comp):
-            den += np.sum(yi[j] / Dij[i,j])
-        Dmi [i] = (1-yi[i])/ den               # Molecular diffusion coefficient for component with Wilke's Equation
-        Dki [i] = 9700 * pore_radius * (T / MW[i]) # Knudsen diffusion [cm2/s]
+        pore_radius = 1e-8  # pore radius in cm
+        den = 0
+        for i in range(0,n_comp):
+            for j in range(0,n_comp):
+                den += np.sum(yi[j] / Dij[i,j])
+            Dmi [i] = (1-yi[i])/ den               # Molecular diffusion coefficient for component with Wilke's Equation
+            Dki [i] = 9700 * pore_radius * (T / MW[i]) # Knudsen diffusion [cm2/s]
+        
+        DMi[k,:] = Dmi
 
     pore_diameter = 130 * 1e-8   # pore diameter in cm, average from Xu-Froment II
     Dki = pore_diameter/3*(8*R*T/(MWmix/1e3)/np.pi)**0.5            # Knudsen diffusion [cm2/s]
