@@ -2,11 +2,21 @@
 # The method of lines is applied to discretize over space and integrate over time 
 # The following simplifications are applied: Tw,Tf = const., eta = 0.1, no axial dispersion 
 
+# For more robust integration of the model within the NLP problem, the authors are implementing 
+# acados wrapped through casados integrators to be handled by the NLP problem. 
+
 from Properties import * 
 import numpy as np 
 from casadi import * 
 from Input import * 
 import matplotlib.pyplot as plt 
+from casados_integrator import * 
+from acados_simulator import create_awe_casados_integrator
+import casadi as ca 
+import time 
+import pickle
+
+# check that it is a 1-index DAE (now it is only an ODE)
 
 L = 2                          # Reactor lenght 
 ncomp = 5                      # Number of components: CH4,CO,CO2,H2,H2O 
@@ -35,11 +45,13 @@ dH2Odt = SX.zeros(N)
 dTdt = SX.zeros(N)              # Time energy equation 
 dTdz = SX.zeros(N)
 
+# The boundaries conditions are here (gradient = 0)
 dCH4dz = SX.zeros(N)
 dCOdz = SX.zeros(N)
 dCO2dz = SX.zeros(N)
 dH2dz = SX.zeros(N) 
 dH2Odz = SX.zeros(N)
+dTdz=SX.zeros(N)
 #dPdz = SX.zeros(N)
 
 # Finite difference loop for spatial derivatives defined as symbolic variables
@@ -103,7 +115,7 @@ Dh_reaction = SX.zeros(3,N) + [225054923.824, -35038982.22,190015941.6]
 Eta = SX.zeros(3,N) + 0.1
 Tf = 850+273.15         # Constant value as first approximation
 P = DM.zeros(N) + np.ones(N)*Pin_R1                  # Constant pressure 
-print(P)
+
 # Pi = SX.zeros(N*n_comp)
 # yi = SX.zeros(N*ncomp)
 
@@ -130,8 +142,10 @@ RhoGas = (Ppa*MWmix) / (R*T)  / 1000                                            
 VolFlow_R1 = m_gas / RhoGas                                                     # Volumetric flow per tube [m3/s]
 u = (F3) * R * T / (Aint*Ppa)                                                   # Superficial Gas velocity if the tube was empy (Coke at al. 2007)
 u = VolFlow_R1 / (Aint * Epsilon)                                               # Gas velocity in the tube [m/s]
+vz  = VolFlow_R1 / (Aint * Epsilon)                                               # Gas velocity in the tube [m/s]
 rj,kr = Kinetics(T,R, Pi, RhoC, Epsilon,N)
 
+#rj= SX.zeros(3,N) + [875248.66, 0.000104 ,10147109677.00]
 
 # Constant U based on ss results 
 U = 60
@@ -143,11 +157,11 @@ U = 60
 const = Aint/(m_gas*3600)
 # Define nu_expanded using CasADi's repmat
 # Use element-wise multiplication and summation
-rhs1 = -vz*dCH4dz + (vz * (const * MW[0] * sum1(repmat(nu[:, 0], 1, N) * (Eta * rj)))).T
-rhs2 = -vz*dCOdz  + (vz*(const*MW[1] * sum1(repmat(nu[:, 1], 1, N) * (Eta * rj)))).T
-rhs3 = -vz*dCO2dz + (vz*(const*MW[2] * sum1(repmat(nu[:, 2], 1, N) * (Eta * rj)))).T
-rhs4 = -vz*dH2dz  + (vz*(const*MW[3] * sum1(repmat(nu[:, 3], 1, N) * (Eta * rj)))).T
-rhs5 = -vz*dH2Odz + (vz*(const*MW[4] * sum1(repmat(nu[:, 0], 1, N) * (Eta * rj)))).T
+rhs1 = -vz*dCH4dz + (vz.T * (const * MW[0] * sum1(repmat(nu[:, 0], 1, N) * (Eta * rj)))).T
+rhs2 = -vz*dCOdz  + (vz.T*(const*MW[1] * sum1(repmat(nu[:, 1], 1, N) * (Eta * rj)))).T
+rhs3 = -vz*dCO2dz + (vz.T*(const*MW[2] * sum1(repmat(nu[:, 2], 1, N) * (Eta * rj)))).T
+rhs4 = -vz*dH2dz  + (vz.T*(const*MW[3] * sum1(repmat(nu[:, 3], 1, N) * (Eta * rj)))).T
+rhs5 = -vz*dH2Odz + (vz.T*(const*MW[4] * sum1(repmat(nu[:, 4], 1, N) * (Eta * rj)))).T
 rhs6 = (np.pi*dTube/(m_gas*Cpmix))*U*(Tf - T) -const/Cpmix* (sum1(Dh_reaction* (Eta*rj))).T
 # DynVis should have size N 
 #rhs7 = ( (-150 * (((1-Epsilon)**2)/(Epsilon**3)) * DynVis * u/ (Dp**2) - (1.75* ((1-Epsilon)/(Epsilon**3)) * m_gas*u/(Dp*Aint))  ) ) / 1e5
@@ -165,114 +179,63 @@ dae = {
     'alg': alg                                   # Algebraic equations (if any)
 }
 
-# Set the initial condition for the integrator
-# Initial values for mass fractions (wCH4, wCO, etc.) and temperature (T)
-w0_CH4 = DM([w0[0]] * N)  # Replace `wCH4_initial` with the actual initial value
-w0_CO = DM([w0[1]] * N)    # Replace `wCO_initial` with the actual initial value
-w0_CO2 = DM([w0[2]] * N)  # Replace `wCO2_initial` with the actual initial value
-w0_H2 = DM([w0[3]] * N)    # Replace `wH2_initial` with the actual initial value
-w0_H2O = DM([w0[4]] * N)  # Replace `wH2O_initial` with the actual initial value
-T0 = DM([Tin_R1] * N)            # Initial temperature for all spatial points
-
-# Stack the initial states together
-T0 = DM([973.15,844.49873485,883.16560916,921.2683747,956.77900731,989.61761612,1019.58960853,1046.60074233,1069.54351148,1087.56602408])
-
-w0_CH4 = DM([9.94454031e-02, 6.36089847e-02, 5.31489777e-02, 4.16291511e-02, 3.06863485e-02, 2.13230089e-02, 1.40311139e-02, 8.98783946e-03, 5.88853533e-03, 4.17853376e-03])
-w0_CO = DM([1.36879324e-05, 1.52244465e-02, 2.58357529e-02, 4.08327141e-02, 5.82066178e-02, 7.57771249e-02, 9.18217516e-02, 1.04944288e-01, 1.14650592e-01, 1.21169960e-01])
-w0_CO2 = DM([2.23244897e-01, 2.97672111e-01, 3.09699173e-01, 3.17743283e-01, 3.20469464e-01, 3.18553061e-01, 3.13350600e-01, 3.06569711e-01, 2.99822692e-01, 2.94271145e-01])
-w0_H2 = DM([9.85179281e-07, 1.69227151e-02, 2.14176706e-02, 2.61297887e-02, 3.03807332e-02, 3.38234632e-02, 3.63346127e-02, 3.79255990e-02, 3.87851485e-02, 3.91756132e-02])
-w0_H2O = DM([6.77295026e-01, 6.06579037e-01, 5.89907691e-01, 5.73676413e-01, 5.60270087e-01, 5.50538149e-01, 5.44477880e-01, 5.41589265e-01, 5.40870150e-01, 5.41222065e-01])
 X0 = vertcat(w0_CH4, w0_CO, w0_CO2, w0_H2, w0_H2O, T0)
 
 T_end = 1.0  # Simulation time in hours 
 time_points = np.linspace(0, T_end, 5)  # Intermediate time points
 
-# Casados integrators 
+collocation_opts = {
+        'tf': 1/N,
+        'number_of_finite_elements': 1,
+        'collocation_scheme':'radau',
+        # 'rootfinder': 'fast_newton',
+        'interpolation_order': 4,
+        'rootfinder_options':
+            {'line_search': False, 'abstolStep': 1e-4, 'max_iter': 20, 'print_iteration': False} #, 'abstol': TOL
 
-# Set up Casados integrator options
-options = {
-    'grid': time_points.tolist(),  # Define the time grid for integration
-    'abstol': 1e-6,               # Absolute tolerance (adjust if needed)
-    'reltol': 1e-6,               # Relative tolerance (adjust if needed)
-    'max_num_steps': 5000         # Maximum number of steps
-}
+        # 'jit': True #   #error Code generation not supported for Collocation
+    }
 
-options = {
-    'grid': time_points.tolist(),
-    'abstol': 1e-2,  # Absolute tolerance
-    'reltol': 1e-2,  # Relative tolerance
-    'max_num_steps': 10000  # Increase max steps if needed
-}
+# CASADOS
+t0 = 0 
+_, f_casados, l_casados = create_awe_casados_integrator(dae, time_points, collocation_opts=collocation_opts, record_time=True, with_sensitivities=True, use_cython=True)
+print(f"time to create casados integrator {time.time() - t0} s")
+# x_sim_casados, l_sim_casados, timings_casados = run_simulation(f_casados, l_casados, ca.vertcat(X0, 0.0).full().squeeze(), controls, N_sim)
+# jacs_casados, timings_jac_casados = run_jacobian_test(f_casados, x_sim_casadi, controls)
 
-integrator = integrator('integrator', 'idas', dae, options)
+# Integrate over time
+# n_steps = 5  # Number of time steps
 
-# # Assuming the integrator produces results over a time grid and outputs state variables
-results = integrator(x0 = X0)  # Execute the integrator to obtain results
+# # Convert results to numpy array for post-processing
+# #results = np.array(results)
 
-# Extract solutions for species and temperature profiles
-solution = results['xf'].full()  # Assuming 'xf' contains the final states after integration
+# time = np.linspace(0, 1.0, n_steps)  # Adjust time vector
+# for i in range(N):
+#     plt.plot(time, results[:, i], label=f"CH4 at z{i}")
+# plt.legend()
+# plt.xlabel("Time [s]")
+# plt.ylabel("CH4 Concentration")
+# plt.show()
+# # Simulate the system
+# time_steps = np.linspace(0, 10, 100)  # Define time grid for simulation
+# states_over_time = []
 
-species_profiles = []
-temperature_profiles = []
-time_steps = np.linspace(0, T_end, len(time_points))  # Define time steps
+# for t in time_steps:
+#     integrator.set("t", t)
+#     integrator.set("x", x0)
+#     integrator.solve()
+#     x0 = integrator.get("x")  # Update the state for the next time step
+#     states_over_time.append(x0.full())
 
-for t_idx, t in enumerate(time_steps):
-    # Extract species and temperature at each time step
-    wCH4_values = solution[t_idx, :N]  # CH4 mass fractions
-    wCO_values = solution[t_idx, N:2*N]  # CO mass fractions
-    wCO2_values = solution[t_idx, 2*N:3*N]  # CO2 mass fractions
-    wH2_values = solution[t_idx, 3*N:4*N]  # H2 mass fractions
-    wH2O_values = solution[t_idx, 4*N:5*N]  # H2O mass fractions
-    temperature_values = solution[t_idx, 5*N:6*N]  # Temperature profile
+# # Convert results to NumPy array for analysis
+# states_over_time = np.array(states_over_time)
 
-    species_profiles.append([
-        wCH4_values,
-        wCO_values,
-        wCO2_values,
-        wH2_values,
-        wH2O_values
-    ])
-    temperature_profiles.append(temperature_values)
-
-species_profiles = np.array(species_profiles)  # Shape: [time_steps, n_species, reactor_length]
-temperature_profiles = np.array(temperature_profiles)  # Shape: [time_steps, reactor_length]
-
-# Compute time-averaged temperature
-average_temperature = np.mean(temperature_profiles, axis=0)
-reactor_length = np.linspace(0, L, N)  # Define reactor length points
-time_steps = []  # To store time steps
-# Plot species evolution
-for species_idx, species_name in enumerate(['CH4', 'CO', 'CO2', 'H2', 'H2O']):
-    plt.figure()
-    for t_idx, t in enumerate(time_steps):
-        plt.plot(reactor_length, species_profiles[t_idx, species_idx], label=f'Time {t:.2f}s')
-    plt.title(f'{species_name} Evolution Along Reactor Length')
-    plt.xlabel('Reactor Length (m)')
-    plt.ylabel(f'{species_name} Mass Fraction')
-    plt.legend()
-    plt.grid()
-    plt.show()
-
-# Plot temperature evolution as a heatmap
-plt.figure()
-plt.imshow(
-    temperature_profiles, 
-    aspect='auto', 
-    extent=[0, L, time_steps[-1], time_steps[0]], 
-    cmap='hot'
-)
-plt.colorbar(label='Temperature (K)')
-plt.title('Temperature Evolution')
-plt.xlabel('Reactor Length (m)')
-plt.ylabel('Time (s)')
-plt.show()
-
-# Plot time-averaged temperature profile
-plt.figure()
-plt.plot(reactor_length, average_temperature, label='Time-Averaged Temperature')
-plt.title('Time-Averaged Temperature Profile Along Reactor Length')
-plt.xlabel('Reactor Length (m)')
-plt.ylabel('Temperature (K)')
-plt.legend()
-plt.grid()
-plt.show()
+# # Plot the results
+# plt.figure(figsize=(10, 6))
+# for i in range(N):  # Plot for each spatial point
+#     plt.plot(time_steps, states_over_time[:, i], label=f"CH4 - Spatial Point {i}")
+# plt.xlabel("Time [s]")
+# plt.ylabel("CH4 Concentration")
+# plt.legend()
+# plt.title("CH4 Concentration Over Time")
+# plt.show()

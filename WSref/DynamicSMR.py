@@ -82,7 +82,6 @@ yi = (w0*m_gas)
 Pi = P * yi 
 # Pi deve avere dimensione N 
 
-
 U,lambda_gas,DynVis = HeatTransfer(T,Tc,n_comp, MW, Pc, yi, Cpmix, RhoGas,dTube, Dp, Epsilon, e_w, u, dTube_out, lambda_s)
 rj,kr = Kinetics(T,R, Pi, RhoC, Epsilon,N)
 Deff = Diffusivity(R,T,P,yi, n_comp, MW, MWmix, e_s, tau)

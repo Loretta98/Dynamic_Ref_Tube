@@ -1,4 +1,5 @@
 import numpy as np 
+from casadi import*
 
 # INPUT DATA FIRST REACTOR
 n_comp = 5; 
@@ -123,5 +124,22 @@ DHreact = np.sum(np.multiply(nu,dH_formation_i),axis=1).transpose()             
 
 Mi_R1 = m_gas * w0 * 3600                                           # Mass flowrate per component [kg/h]
 RhoGas = (Pin_R1*1e5*MWmix) / (R*Tin_R1)  / 1000                                        # Gas mass density [kg/m3]
-VolFlow_R1 = m_gas*3600 / RhoGas    # m3/h 
+VolFlow_R1 = m_gas / RhoGas    # m3/h 
 vz = VolFlow_R1                     #/Aint ### oppure potrebbe essere definito come u 
+
+w0_CH4 = DM([9.94454031e-02, 6.36089847e-02, 5.31489777e-02, 4.16291511e-02, 3.06863485e-02, 2.13230089e-02, 1.40311139e-02, 8.98783946e-03, 5.88853533e-03, 4.17853376e-03])
+w0_CO = DM([1.36879324e-05, 1.52244465e-02, 2.58357529e-02, 4.08327141e-02, 5.82066178e-02, 7.57771249e-02, 9.18217516e-02, 1.04944288e-01, 1.14650592e-01, 1.21169960e-01])
+w0_CO2 = DM([2.23244897e-01, 2.97672111e-01, 3.09699173e-01, 3.17743283e-01, 3.20469464e-01, 3.18553061e-01, 3.13350600e-01, 3.06569711e-01, 2.99822692e-01, 2.94271145e-01])
+w0_H2 = DM([9.85179281e-07, 1.69227151e-02, 2.14176706e-02, 2.61297887e-02, 3.03807332e-02, 3.38234632e-02, 3.63346127e-02, 3.79255990e-02, 3.87851485e-02, 3.91756132e-02])
+w0_H2O = DM([6.77295026e-01, 6.06579037e-01, 5.89907691e-01, 5.73676413e-01, 5.60270087e-01, 5.50538149e-01, 5.44477880e-01, 5.41589265e-01, 5.40870150e-01, 5.41222065e-01])
+# Set the initial condition for the integrator
+# # Initial values for mass fractions (wCH4, wCO, etc.) and temperature (T)
+# w0_CH4 = DM([w0[0]] * N)  # Replace `wCH4_initial` with the actual initial value
+# w0_CO = DM([w0[1]] * N)    # Replace `wCO_initial` with the actual initial value
+# w0_CO2 = DM([w0[2]] * N)  # Replace `wCO2_initial` with the actual initial value
+# w0_H2 = DM([w0[3]] * N)    # Replace `wH2_initial` with the actual initial value
+# w0_H2O = DM([w0[4]] * N)  # Replace `wH2O_initial` with the actual initial value
+# T0 = DM([Tin_R1] * N)            # Initial temperature for all spatial points
+
+# Stack the initial states together
+T0 = DM([973.15,844.49873485,883.16560916,921.2683747,956.77900731,989.61761612,1019.58960853,1046.60074233,1069.54351148,1087.56602408])
