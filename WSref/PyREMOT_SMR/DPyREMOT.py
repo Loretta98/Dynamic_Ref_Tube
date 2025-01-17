@@ -5,7 +5,7 @@ import numpy as np
 ### IMPORT PACKAGES/MODULES ###
 #------------------------------
 from PyREMOT import rmtCom
-
+print(rmtCom())
 ### IMPORT PACKAGES/MODULES ###
 #------------------------------
 import math
@@ -14,13 +14,14 @@ from PyREMOT import rmtExe
 ### OPERATING CONDITIONS ###
 #----------------------------
 # pressure [Pa]
-P = 15 * 1e5
+P = 1500000
 # temperature [K]
-T = 600+273.15
+T = 873.15
 # process-type [-]
 PrTy = "non-iso-thermal"
+#PrTy = "isothermal"
 # operation-period [s]
-opT = 0.5
+opT = ((60)*60)*20
 
 ### FEED PROPERTIES ###
 #-----------------------
@@ -32,7 +33,7 @@ SpCoi = Fin/(VoFlRa*3600)
 ### REACTOR SPEC ###
 #-------------------
 # reactor-length [m]
-ReLe = 2
+ReLe = 2.0
 # reactor-inner-diameter [m]
 ReInDi =  0.14142
 # bed-void-fraction [-]
@@ -42,16 +43,16 @@ CaBeDe = 2355.2
 # particle-diameter [m]
 PaDi = 0.015
 # particle-density [kg/m^3]
-CaDe = 1920
+CaDe = 1000
 # particle-specific-heat-capacity  [J/kg.K]
-CaSpHeCa = 960
+CaSpHeCa = 900
 
 ### HEAT-EXCHANGER SPEC ###
 #---------------------------
 # overall-heat-transfer-coefficient [J/m^2.s.K]
 U = 60
 # medium-temperature [K]
-Tm = 600+273.15
+Tm = 873.15
 
 ### SOLVER SETTING ###
 #---------------------
@@ -62,7 +63,7 @@ diRe = "True"
 
 ### COMPONENT LIST ###
 #----------------------
-compList = ["H2","CO","CO2","H2","H2O"]
+compList = ["CH4","CO","CO2","H2","H2O"]
 
 ### REACTION LIST ###
 #---------------------
@@ -79,48 +80,70 @@ Tr_b = 823
 k0 = np.array([1.842e-4, 7.558,     2.193e-5])                                      # pre exponential factor @648 K kmol/bar/kgcat/h
 E_a = np.array([240.1,   67.13,     243.9])                                         # activation energy [kJ/mol]
 
-### REACTION RATE PARAMS ###
-#----------------------------
+# Adsorption constants
+K0_a = np.array([40.91, 0.0296])  # pre-exponential factors @648 K [1/bar]
+DH0_a = np.array([-70.65, -82.90])  # adsorption enthalpy [kJ/mol]
+K0_b = np.array([0.1791, 0.4152])                                 # pre exponential factor @823 K [1/bar, -]
+DH0_b = np.array([-38.28,  88.68])                                # adsorption enthalpy [kJ/mol] 
+
+### REACTION PARAMETERS ###
+# Equilibrium constants fitted from Nielsen in [bar]
+gamma = np.array([[-757.323e5, 997.315e3, -28.893e3, 31.29], 
+                  [-646.231e5, 563.463e3, 3305.75, -3.466]])
+
+# Arrhenius constants
+Tr_a = 648  # K
+k0 = np.array([1.842e-4, 7.558, 2.193e-5])  # pre-exponential factors [kmol/bar/kgcat/h]
+E_a = np.array([240.1, 67.13, 243.9])  # activation energies [kJ/mol]
+
+# Adsorption constants
+K0_a = np.array([40.91, 0.0296])  # pre-exponential factors @648 K [1/bar]
+DH0_a = np.array([-70.65, -82.90])  # adsorption enthalpy [kJ/mol]
+K0_b = np.array([0.1791, 0.4152])  # pre-exponential factors @823 K [1/bar]
+DH0_b = np.array([-38.28, 88.68])  # adsorption enthalpy [kJ/mol]
+Eta = 0.1 
+### VARIABLE DEFINITIONS ###
 varis0 = {
-  "CaBeDe" : CaBeDe,
-  "RT": lambda x: x['R_CONST']*x['T'],
-  "K1": lambda x: math.exp(gamma[0,0]/(x['T']**3)+gamma[0,1]/(x['T']**2)+gamma[0,2]/x['T'] + gamma[0,3]),
-  "K2": lambda x: math.exp(gamma[1,0]/(x['T']**3)+gamma[1,1]/(x['T']**2)+gamma[1,2]/x['T'] + gamma[1,3]),
-  "K3": lambda x: x['K1']*x['K2'],
-  "KH2": lambda x: 0.249*math.exp(3.4394e4/x['RT']),
-  "KCO2": lambda x: 1.02e-7*math.exp(6.74e4/x['RT']),
-  "KCO": lambda x: 7.99e-7*math.exp(5.81e4/x['RT']),
-  "Ln_KP1": lambda x: 4213/x['T'] - 5.752 *     math.log(x['T']) - 1.707e-3*x['T'] + 2.682e-6 *     (math.pow(x['T'], 2)) - 7.232e-10*(math.pow(x['T'], 3)) + 17.6,
-  "KP1": lambda x: math.exp(x['Ln_KP1']),
-  "log_KP2": lambda x: 2167/x['T'] - 0.5194 *     math.log10(x['T']) + 1.037e-3*x['T'] - 2.331e-7 *     (math.pow(x['T'], 2)) - 1.2777,
-  "KP2": lambda x: math.pow(10, x['log_KP2']),
-      "Ln_KP3": lambda x:  4019/x['T'] + 3.707 *     math.log(x['T']) - 2.783e-3*x['T'] + 3.8e-7 *     (math.pow(x['T'], 2)) - 6.56e-4/(math.pow(x['T'], 3)) - 26.64,
-  "KP3": lambda x:  math.exp(x['Ln_KP3']),
-  "yi_CH4": lambda x:  x['MoFri'][0],
-  "yi_CO": lambda x:  x['MoFri'][1],
-  "yi_CO2": lambda x:  x['MoFri'][2],
-  "yi_H2": lambda x:  x['MoFri'][3],
-  "yi_H2O": lambda x:  x['MoFri'][4],
-  "PH2": lambda x:  x['P']*(x['yi_H2'])*1e-5,
-  "PCO2": lambda x:  x['P']*(x['yi_CO2'])*1e-5,
-  "PH2O": lambda x:  x['P']*(x['yi_H2O'])*1e-5,
-  "PCO": lambda x: x['P']*(x['yi_CO'])*1e-5,
-  "PCH4": lambda x: x['P']*(x['yi_CH4'])*1e-5,
-  "ra1": lambda x:  x['PCO2']*x['PH2'],
-  "ra2": lambda x:  1 + (x['KCO2']*x['PCO2']) + (x['KCO']*x['PCO']) + math.sqrt(x['KH2']*x['PH2']),
-  "ra3": lambda x: (1/x['KP1'])*((x['PH2O']*x['PCH3OH'])/(x['PCO2']*(math.pow(x['PH2'], 3)))),
-  "ra4": lambda x:  x['PH2O'] - (1/x['KP2'])*((x['PCO2']*x['PH2'])/x['PCO']),
-  "ra5": lambda x: (math.pow(x['PCH3OH'], 2)/x['PH2O'])-(x['PCH3OCH3']/x['KP3'])
+    "Eta": Eta,
+    "CaBeDe" : CaBeDe,
+    "RT": lambda x: x['R_CONST'] * x['T'],
+    "K1": lambda x: math.exp(gamma[0, 0] / (x['T']**3) + gamma[0, 1] / (x['T']**2) + gamma[0, 2] / x['T'] + gamma[0, 3]),
+    "K2": lambda x: math.exp(gamma[1, 0] / (x['T']**3) + gamma[1, 1] / (x['T']**2) + gamma[1, 2] / x['T'] + gamma[1, 3]),
+    "K3": lambda x: x['K1'] * x['K2'],
+
+    "kr0": lambda x: k0[0] * math.exp(-E_a[0] * 1000 / x['RT']),
+    "kr1": lambda x: k0[1] * math.exp(-E_a[1] * 1000 / x['RT']),
+    "kr2": lambda x: k0[2] * math.exp(-E_a[2] * 1000 / x['RT']),
+
+    "Kr0": lambda x: K0_a[0] * math.exp(-((DH0_a[0] * 1000) / x['R_CONST']) * (1 / x['T'] - 1 / Tr_a)),
+    "Kr1": lambda x: K0_a[1] * math.exp(-((DH0_a[1] * 1000) / x['R_CONST']) * (1 / x['T'] - 1 / Tr_a)),
+    "Kr2": lambda x: K0_b[0] * math.exp(-((DH0_b[0] * 1000) / x['R_CONST']) * (1 / x['T'] - 1 / Tr_b)),
+    "Kr3": lambda x: K0_b[1] * math.exp(-((DH0_b[1] * 1000) / x['R_CONST']) * (1 / x['T'] - 1 / Tr_b)),
+
+    "yi_CH4": lambda x: x['MoFri'][0],
+    "yi_CO": lambda x: x['MoFri'][1],
+    "yi_CO2": lambda x: x['MoFri'][2],
+    "yi_H2": lambda x: x['MoFri'][3],
+    "yi_H2O": lambda x: x['MoFri'][4],
+    "PH2": lambda x: x['P'] * (x['yi_H2']) * 1e-5,
+    "PCO2": lambda x: x['P'] * (x['yi_CO2']) * 1e-5,
+    "PH2O": lambda x: x['P'] * (x['yi_H2O']) * 1e-5,
+    "PCO": lambda x: x['P'] * (x['yi_CO']) * 1e-5,
+    "PCH4": lambda x: x['P'] * (x['yi_CH4']) * 1e-5,
+
+    "DEN": lambda x: 1 + x['Kr0'] * x['PCO'] + x['Kr1'] * x['PH2'] + x['Kr2'] * x['PCH4'] + x['Kr3'] * x['PH2O'] / x['PH2'],
+    "r1_term": lambda x: (x['kr0'] / (x['PH2']**2.5)) * (x['PCH4'] * x['PH2O'] - (x['PH2']**3) * x['PCO'] / x['K1']),
+    "r2_term": lambda x: (x['kr1'] / x['PH2']) * (x['PCO'] * x['PH2O'] - x['PH2'] * x['PCO2'] / x['K2']),
+    "r3_term": lambda x: (x['kr2'] / (x['PH2']**3.5)) * (x['PCH4'] * (x['PH2O']**2) - (x['PH2']**4) * x['PCO2'] / x['K3'])
 }
+
 
 ### REACTION RATE EXPRESSIONS ###
-#--------------------------------
 rates0 = {
-  "r1": lambda x: 1000*x['K1']*(x['ra1']/(math.pow(x['ra2'], 3)))*(1-x['ra3'])*x['CaBeDe'],
-  "r2": lambda x: 1000*x['K2']*(1/x['ra2'])*x['ra4']*x['CaBeDe'],
-  "r3": lambda x: 1000*x['K3']*x['ra5']*x['CaBeDe']
+    "r1": lambda x: (x['r1_term'] / (x['DEN']**2)) * x['CaBeDe']*x['Eta'],
+    "r2": lambda x: (x['r2_term'] / (x['DEN']**2)) * x['CaBeDe']*x['Eta'],
+    "r3": lambda x: (x['r3_term'] / (x['DEN']**2)) * x['CaBeDe']*x['Eta']
 }
-
 
 
 ### MODEL INPUTS ###

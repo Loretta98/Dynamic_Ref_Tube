@@ -140,7 +140,7 @@ def create_reactor_steady(N,L):
     dTdz = SX.sym('dTdz')              # Time energy equation 
     
     # State variables
-    t = SX.sym('t')
+    #t = SX.sym('t')
     wCH4 = SX.sym('wCH4')
     wCO = SX.sym('wCO')
     wCO2 = SX.sym('wCO2')
@@ -190,9 +190,9 @@ def create_reactor_steady(N,L):
     VolFlow_R1 = m_gas / RhoGas                                                     # Volumetric flow per tube [m3/s]
     u_ = (F3) * R * T / (Aint*Ppa)                                                   # Superficial Gas velocity if the tube was empy (Coke at al. 2007)
     vz  = VolFlow_R1 / (Aint * Epsilon)                                               # Gas velocity in the tube [m/s]
-    #rj,kr = Kinetics(T,R, Pi, RhoC, Epsilon)
+    rj,kr = Kinetics(T,R, Pi, RhoC, Epsilon)
     #Dh_reaction = SX.zeros(3) + [225054923.824, -35038982.22,190015941.6]
-    rj = np.zeros(3) + [875248.66, 0.00104, 10147109677.00]
+    #rj = np.zeros(3) + [875248.66, 0.00104, 10147109677.00]
     Eta = SX.zeros(3) + 0.1
 
     # RHS expressions
