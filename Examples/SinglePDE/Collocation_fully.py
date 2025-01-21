@@ -1,16 +1,19 @@
 from casadi import * 
 import numpy as np 
 
-def coll_setup(nicp,nk,L,ndstate,nastate,deg,cp): 
+def coll_setup(nicp,nk,L,ndstate,nastate,deg,cp,deg_t): 
     # Size of the finite element 
     h = L/nk/nicp
 
     # Coefficients of the collocation equation (1st order derivative)
     C = np.zeros((deg+1,deg+1))
-    # Coefficients of the collocation equation (2nd order derivative)
+    # Coefficients of the collocation equation (2nd order derivative)-
     B = np.zeros((deg+1,deg+1))
+    # Coefficients of the collocation equation (1st order derivative in time)
+    A = np.zeros((deg_t+1,deg_t+1))
     # Coefficients of the continuity equation
     D = np.zeros(deg+1)
+    G = np.zeros(deg_t+1)
     # Collocation point
     tau = SX.sym("tau")
     # All collocation time points
@@ -44,7 +47,7 @@ def coll_setup(nicp,nk,L,ndstate,nastate,deg,cp):
         for j2 in range(deg+1):
             B[j][j2] = tfcn2(tau_root[j2])
 
-    return B,C,D,tau_root,h,tau,S
+    return A,B,C,D, G,tau_root,h,tau,S
 
 def problem_setup(t,x,xa,xd,xdd,u,p,nk,nicp,deg,h,B,C,D,fcn,facn,n,u0): 
 
