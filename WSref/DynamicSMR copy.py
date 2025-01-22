@@ -142,7 +142,7 @@ U = 60
 const = Aint/(m_gas*3600)
 # Define nu_expanded using CasADi's repmat
 # Use element-wise multiplication and summation
-rhs1 = -vz*dCH4dz + (vz * (const * MW[0] * sum1(repmat(nu[:, 0], 1, N) * (Eta * rj)))).T
+rhs1 = -vz*dCH4dz + (vz *(const * MW[0] * sum1(repmat(nu[:, 0], 1, N) * (Eta * rj)))).T
 rhs2 = -vz*dCOdz  + (vz*(const*MW[1] * sum1(repmat(nu[:, 1], 1, N) * (Eta * rj)))).T
 rhs3 = -vz*dCO2dz + (vz*(const*MW[2] * sum1(repmat(nu[:, 2], 1, N) * (Eta * rj)))).T
 rhs4 = -vz*dH2dz  + (vz*(const*MW[3] * sum1(repmat(nu[:, 3], 1, N) * (Eta * rj)))).T
@@ -298,7 +298,7 @@ w0_H2O = DM([0.67729503, 0.59516192, 0.59419943, 0.5941465,  0.59415319, 0.59414
 X0 = vertcat(w0_CH4, w0_CO, w0_CO2, w0_H2, w0_H2O, T0)
 
 T_end = 1.0  # Simulation time in hours 
-time_points = np.linspace(0, T_end, 10)  # Intermediate time points
+time_points = np.linspace(0, T_end, 100)  # Intermediate time points
 
 # Casados integrators 
 
@@ -329,9 +329,9 @@ for t_idx, t in enumerate(time_points[:-1]):
     ])
     temperature_profiles.append(X0[5*N:].full().flatten())  # Temperature
 
-# Convert profiles to numpy arrays for analysis
-species_profiles = np.array(species_profiles)  # Shape: [time_steps, n_species, reactor_length]
-temperature_profiles = np.array(temperature_profiles)  # Shape: [time_steps, reactor_length]
+    # Convert profiles to numpy arrays for analysis
+    species_profiles = np.array(species_profiles)  # Shape: [time_steps, n_species, reactor_length]
+    temperature_profiles = np.array(temperature_profiles)  # Shape: [time_steps, reactor_length]
 
 species_profiles = []
 temperature_profiles = []

@@ -125,7 +125,7 @@ DHreact = np.sum(np.multiply(nu,dH_formation_i),axis=1).transpose()             
 Mi_R1 = m_gas * w0 * 3600                                           # Mass flowrate per component [kg/h]
 RhoGas = (Pin_R1*1e5*MWmix) / (R*Tin_R1)  / 1000                                        # Gas mass density [kg/m3]
 VolFlow_R1 = m_gas / RhoGas    # m3/h 
-vz = VolFlow_R1                     #/Aint ### oppure potrebbe essere definito come u 
+vz = VolFlow_R1/Aint                     #/Aint ### oppure potrebbe essere definito come u [m/h] 
 
 w0_CH4 = DM([9.94454031e-02, 6.36089847e-02, 5.31489777e-02, 4.16291511e-02, 3.06863485e-02, 2.13230089e-02, 1.40311139e-02, 8.98783946e-03, 5.88853533e-03, 4.17853376e-03])
 w0_CO = DM([1.36879324e-05, 1.52244465e-02, 2.58357529e-02, 4.08327141e-02, 5.82066178e-02, 7.57771249e-02, 9.18217516e-02, 1.04944288e-01, 1.14650592e-01, 1.21169960e-01])

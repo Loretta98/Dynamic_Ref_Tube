@@ -193,6 +193,7 @@ def create_reactor_steady(N,L):
     rj,kr = Kinetics(T,R, Pi, RhoC, Epsilon)
     #Dh_reaction = SX.zeros(3) + [225054923.824, -35038982.22,190015941.6]
     #rj = np.zeros(3) + [875248.66, 0.00104, 10147109677.00]
+    #rj = 0
     Eta = SX.zeros(3) + 0.1
 
     # RHS expressions

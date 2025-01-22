@@ -72,7 +72,7 @@ def run_forward_sim(integrator_opts, plot_traj=True, use_acados=True, use_cython
         # plt.legend()
         # plt.grid(True)
 
-    plt.show()
+    #plt.show()
 
     return profiles
     # # print(f"test_integrator.has_jacobian(): {test_integrator.has_jacobian()}")
@@ -120,8 +120,8 @@ def main():
     results = []
     results = run_forward_sim(integrator_opts)
 
-    time_steps = np.linspace(0, t_f, N_sim)
-    for i in range(N):
+    time_steps = np.linspace(0, t_f, N_sim+1)
+    for i in range(0,1):
         plt.plot(time_steps, results[:, i], label=f"CH4 at z{i}")
     plt.legend()
     plt.xlabel("Time [h]")
