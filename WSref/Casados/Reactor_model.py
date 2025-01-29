@@ -120,13 +120,13 @@ def Twall(z, a, b, c):
 b = 2  # Adjusted for the curve shape
 c = 600+273.15  # Starting temperature
 
-def create_reactor_steady(N,L,vz): 
+def create_reactor_steady(): 
     model_name = "reactor_model_SS"
     ncomp=5
     # Constant
     U = 60
-    #Tf = 850 + 273.15  # Convert to Kelvin
-    T = 850+273.15
+    Tf = 850 + 273.15  # Convert to Kelvin
+    #T = 850+273.15
     dTube = 0.1
     pi = np.pi
     MW = DM([16.04, 28.01, 44.01, 2.016, 18.015])
@@ -146,7 +146,7 @@ def create_reactor_steady(N,L,vz):
     wCO2 = SX.sym('wCO2')
     wH2 = SX.sym('wH2')
     wH2O = SX.sym('wH2O')
-    #T = SX.sym('T')
+    T = SX.sym('T')
     z = SX.sym('z')
     u = SX.sym('u')
 
@@ -162,10 +162,10 @@ def create_reactor_steady(N,L,vz):
     Cp_mol = c1+c2*T+c3*T**2+c4*T**3+c5/T**2                        # Molar specific heat per component [J/molK]
     Cp = Cp_mol/MW*1000                                             # Mass specific heat per component [J/kgK]
     Cpmix = sum1(Cp*omega)   
-    # Dh_reaction = SX.zeros(3)
-    # for i in range(0,3):                                     # Mass specific heat [J/kgK]
-    #     Dh_reaction[i] = DHreact[i]*1000 + sum1(nu_[i]*(c1*(T-298) + c2*(T**2-298**2)/2 + c3*(T**3-298**3)/3 + c4*(T**4-298**4)/4 - c5*(1/T-1/298))) #J/mol
-    # Dh_reaction = Dh_reaction*1000 #J/kmol
+    Dh_reaction = SX.zeros(3)
+    for i in range(0,3):                                     # Mass specific heat [J/kgK]
+        Dh_reaction[i] = DHreact[i]*1000 + sum1(nu_[i]*(c1*(T-298) + c2*(T**2-298**2)/2 + c3*(T**3-298**3)/3 + c4*(T**4-298**4)/4 - c5*(1/T-1/298))) #J/mol
+    Dh_reaction = Dh_reaction*1000 #J/kmol
     # print(Cpmix,Dh_reaction)
     #P = DM.zeros(N) + np.ones(N)*Pin_R1                  # Constant pressure 
     P = Pin_R1
@@ -189,7 +189,9 @@ def create_reactor_steady(N,L,vz):
     # u_ = (F3) * R * T / (Aint*Ppa)                                                   # Superficial Gas velocity if the tube was empy (Coke at al. 2007)
     # vz  = VolFlow_R1 / (Aint)                                               # Gas velocity in the tube [m/s]
     rj,kr = Kinetics(T,R, Pi, RhoC, Epsilon)
+    
     #Dh_reaction = SX.zeros(3) + [225054923.824, -35038982.22,190015941.6]
+    
     #rj = np.zeros(3)  
     #rj = 0
     Eta = SX.zeros(3) + 0.1
@@ -200,15 +202,15 @@ def create_reactor_steady(N,L,vz):
     rhs3 = ((const * MW[2] * sum1(nu_[:, 2] * (Eta * rj))))
     rhs4 = ((const * MW[3] * sum1(nu_[:, 3] * (Eta * rj))))
     rhs5 = ((const * MW[4] * sum1(nu_[:, 4] * (Eta * rj))))
-    #rhs6 = (pi * dTube / (m_gas * Cpmix)) * U * (Tf - T) - const / Cpmix * (sum1(Dh_reaction * (Eta * rj)))
+    rhs6 = (pi * dTube / (m_gas * Cpmix)) * U * (Tf - T) - const / Cpmix * (sum1(Dh_reaction * (Eta * rj)))
 
     # Combine RHS
-    xdot = vertcat(dCH4dz,dCOdz,dCO2dz,dH2dz,dH2Odz)#,dTdz)
-    f_expl = vertcat(rhs1, rhs2, rhs3, rhs4, rhs5)#, rhs6)
-    ode = vertcat(dCH4dz - rhs1, dCOdz - rhs2, dCO2dz - rhs3, dH2dz - rhs4, dH2Odz - rhs5)#, dTdz - rhs6)
+    xdot = vertcat(dCH4dz,dCOdz,dCO2dz,dH2dz,dH2Odz,dTdz)#,dTdz)
+    f_expl = vertcat(rhs1, rhs2, rhs3, rhs4, rhs5, rhs6)
+    ode = vertcat(dCH4dz - rhs1, dCOdz - rhs2, dCO2dz - rhs3, dH2dz - rhs4, dH2Odz - rhs5, dTdz - rhs6)
     alg = vertcat()
     #alg = vertcat( dPdz-rhs7 )
-    x = vertcat(wCH4, wCO, wCO2, wH2, wH2O)#, T)
+    x = vertcat(wCH4, wCO, wCO2, wH2, wH2O, T)
     z = None
     u = None
 

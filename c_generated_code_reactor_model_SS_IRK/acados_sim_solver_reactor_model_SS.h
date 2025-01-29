@@ -34,7 +34,7 @@
 #include "acados_c/sim_interface.h"
 #include "acados_c/external_function_interface.h"
 
-#define REACTOR_MODEL_SS_NX     5
+#define REACTOR_MODEL_SS_NX     6
 #define REACTOR_MODEL_SS_NZ     0
 #define REACTOR_MODEL_SS_NU     0
 #define REACTOR_MODEL_SS_NP     0

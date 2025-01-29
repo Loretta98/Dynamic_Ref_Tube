@@ -7,13 +7,13 @@ from utils import create_casados_integrator, create_casadi_integrator
 from Reactor_model import * 
 
 
-def run_forward_sim(integrator_opts,Nsim,dt,vz, plot_traj=True, use_acados=True, use_cython=False):
+def run_forward_sim(integrator_opts, Nsim, plot_traj=True, use_acados=True, use_cython=False):
     u0 = np.array([0.0])
    # x0 = np.zeros(N*(n_comp+1)) + (w0_CH4[0], w0_CO[0], w0_CO2[0], w0_H2[0], w0_H2O[0], T0[0])
-    x0 = vertcat(w0)#,T0[0])
+    x0 = vertcat(w0,T0[0])
     dt = L/Nsim
     # create integrator
-    model = create_reactor_steady(Nsim,L,vz)
+    model = create_reactor_steady()
     #model = create_reactor_dynamics(N,L)
     if use_acados:
         test_integrator = create_casados_integrator(
@@ -39,21 +39,22 @@ def run_forward_sim(integrator_opts,Nsim,dt,vz, plot_traj=True, use_acados=True,
 
     if plot_traj:
         plt.figure(figsize=(10, 6))
-        for i in range(profiles.shape[1]):  # Exclude temperature for a separate plot
+        for i in range(profiles.shape[1]-1):  # Exclude temperature for a separate plot
             plt.plot(z_points, profiles[:, i], label=f"Component {i}")
         plt.xlabel("Spatial Location (z)")
         plt.ylabel("Concentration")
         plt.title("Component Concentration Profiles Along the Reactor")
         plt.legend()
         plt.grid(True)
+        
+        # Temperature profile
+        plt.figure(figsize=(10, 6))
+        plt.plot(z_points, profiles[:, -1], label="Temperature", color="red")
+        plt.xlabel("Spatial Location (z)")
+        plt.ylabel("Temperature (K)")
+        plt.title("Temperature Profile Along the Reactor")
+        plt.legend()
         plt.show()
-        # # Temperature profile
-        # plt.figure(figsize=(10, 6))
-        # plt.plot(z_points, profiles[:, -1], label="Temperature", color="red")
-        # plt.xlabel("Spatial Location (z)")
-        # plt.ylabel("Temperature (K)")
-        # plt.title("Temperature Profile Along the Reactor")
-        # plt.legend()
 
     return profiles
     # # print(f"test_integrator.has_jacobian(): {test_integrator.has_jacobian()}")
@@ -87,19 +88,16 @@ def run_forward_sim(integrator_opts,Nsim,dt,vz, plot_traj=True, use_acados=True,
 L = 2 
 
 def main(): 
-    Nsim = 10 
-    vz = 0
-    dt = 2
+    Nsim = 100
     integrator_opts = {
         "type": "implicit",
         "collocation_scheme": "radau",
-        "num_stages": 5,
+        "num_stages": 9,
         "num_steps": 500,
         "newton_iter": 1000,
         "tol": 1e-6,
     }
-    results = []
-    results = run_forward_sim(integrator_opts,Nsim,dt,vz)
+    run_forward_sim(integrator_opts,Nsim)
 
 if __name__ == "__main__":
     main()

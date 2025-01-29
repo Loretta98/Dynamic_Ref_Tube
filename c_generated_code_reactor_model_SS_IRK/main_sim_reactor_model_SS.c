@@ -68,6 +68,7 @@ int main()
     x_current[2] = 0.0;
     x_current[3] = 0.0;
     x_current[4] = 0.0;
+    x_current[5] = 0.0;
 
   
     printf("main_sim: initial state not defined, should be in lbx_0, using zero vector.");

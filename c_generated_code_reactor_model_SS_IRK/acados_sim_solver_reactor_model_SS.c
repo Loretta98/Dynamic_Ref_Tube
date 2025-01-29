@@ -73,7 +73,7 @@ int reactor_model_SS_acados_sim_create(reactor_model_SS_sim_solver_capsule * cap
     const int np = REACTOR_MODEL_SS_NP;
     bool tmp_bool;
 
-    double Tsim = 0.2;
+    double Tsim = 0.02;
 
     external_function_opts ext_fun_opts;
     external_function_opts_set_to_default(&ext_fun_opts);
@@ -145,7 +145,7 @@ int reactor_model_SS_acados_sim_create(reactor_model_SS_sim_solver_capsule * cap
     sim_opts_set(reactor_model_SS_sim_config, reactor_model_SS_sim_opts, "collocation_type", &collocation_type);
 
 
-    tmp_int = 5;
+    tmp_int = 9;
     sim_opts_set(reactor_model_SS_sim_config, reactor_model_SS_sim_opts, "num_stages", &tmp_int);
     tmp_int = 500;
     sim_opts_set(reactor_model_SS_sim_config, reactor_model_SS_sim_opts, "num_steps", &tmp_int);
@@ -193,8 +193,8 @@ int reactor_model_SS_acados_sim_create(reactor_model_SS_sim_solver_capsule * cap
 
     /* initialize input */
     // x
-    double x0[5];
-    for (int ii = 0; ii < 5; ii++)
+    double x0[6];
+    for (int ii = 0; ii < 6; ii++)
         x0[ii] = 0.0;
 
     sim_in_set(reactor_model_SS_sim_config, reactor_model_SS_sim_dims,
@@ -210,11 +210,11 @@ int reactor_model_SS_acados_sim_create(reactor_model_SS_sim_solver_capsule * cap
                reactor_model_SS_sim_in, "u", u0);
 
     // S_forw
-    double S_forw[25];
-    for (int ii = 0; ii < 25; ii++)
+    double S_forw[36];
+    for (int ii = 0; ii < 36; ii++)
         S_forw[ii] = 0.0;
-    for (int ii = 0; ii < 5; ii++)
-        S_forw[ii + ii * 5 ] = 1.0;
+    for (int ii = 0; ii < 6; ii++)
+        S_forw[ii + ii * 6 ] = 1.0;
 
 
     sim_in_set(reactor_model_SS_sim_config, reactor_model_SS_sim_dims,
