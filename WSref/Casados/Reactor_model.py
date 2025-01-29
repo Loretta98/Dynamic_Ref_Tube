@@ -120,18 +120,18 @@ def Twall(z, a, b, c):
 b = 2  # Adjusted for the curve shape
 c = 600+273.15  # Starting temperature
 
-def create_reactor_steady(N,L): 
+def create_reactor_steady(N,L,vz): 
     model_name = "reactor_model_SS"
     ncomp=5
     # Constant
     U = 60
     #Tf = 850 + 273.15  # Convert to Kelvin
-    T = 600+273.15
+    T = 850+273.15
     dTube = 0.1
     pi = np.pi
     MW = DM([16.04, 28.01, 44.01, 2.016, 18.015])
     const = Aint / (m_gas * 3600)  # Flow rate adjustment
-
+    #const = Aint
     dCH4dz = SX.sym('dCH4dz')
     dCOdz = SX.sym('dCOdz')
     dCO2dz = SX.sym('dCO2dz')
@@ -167,12 +167,11 @@ def create_reactor_steady(N,L):
     #     Dh_reaction[i] = DHreact[i]*1000 + sum1(nu_[i]*(c1*(T-298) + c2*(T**2-298**2)/2 + c3*(T**3-298**3)/3 + c4*(T**4-298**4)/4 - c5*(1/T-1/298))) #J/mol
     # Dh_reaction = Dh_reaction*1000 #J/kmol
     # print(Cpmix,Dh_reaction)
-    Z = np.linspace(0,L,N)
     #P = DM.zeros(N) + np.ones(N)*Pin_R1                  # Constant pressure 
     P = Pin_R1
-    yi = SX.zeros((N, ncomp))
-    Pi = SX.zeros((N, ncomp))
-    MW = DM([16.04, 28.01, 44.01, 2.016, 18.015]) 
+    yi = SX.zeros((ncomp))
+    Pi = SX.zeros((ncomp))
+
     # Loop over spatial points
     a = Tf-Twin  # (900°C - 600°C)
     Tw = Twall(z,a,b,Twin)
@@ -184,21 +183,20 @@ def create_reactor_steady(N,L):
 
     Pi = P*yi                                               # Partial Pressure
     Ppa = P * 1E5                                           # Pressure [Pa]
-    #Eta = 0.1                                               # effectiveness factor (Latham et al., Kumar et al.)
     # Estimation of physical properties with ideal mixing rules
-    RhoGas = (Ppa*MWmix) / (R*T)  / 1000                                            # Gas mass density [kg/m3]
-    VolFlow_R1 = m_gas / RhoGas                                                     # Volumetric flow per tube [m3/s]
-    u_ = (F3) * R * T / (Aint*Ppa)                                                   # Superficial Gas velocity if the tube was empy (Coke at al. 2007)
-    vz  = VolFlow_R1 / (Aint * Epsilon)                                               # Gas velocity in the tube [m/s]
+    # RhoGas = (Ppa*MWmix) / (R*T)  / 1000                                            # Gas mass density [kg/m3]
+    # VolFlow_R1 = m_gas / RhoGas                                                     # Volumetric flow per tube [m3/s]
+    # u_ = (F3) * R * T / (Aint*Ppa)                                                   # Superficial Gas velocity if the tube was empy (Coke at al. 2007)
+    # vz  = VolFlow_R1 / (Aint)                                               # Gas velocity in the tube [m/s]
     rj,kr = Kinetics(T,R, Pi, RhoC, Epsilon)
     #Dh_reaction = SX.zeros(3) + [225054923.824, -35038982.22,190015941.6]
-    #rj = np.zeros(3) + [875248.66, 0.00104, 10147109677.00]
+    #rj = np.zeros(3)  
     #rj = 0
     Eta = SX.zeros(3) + 0.1
 
     # RHS expressions
-    rhs1 =  ((const * MW[0] * sum1(nu_[:, 0] * (Eta * rj))))
-    rhs2 =  ((const * MW[1] * sum1(nu_[:, 1] * (Eta * rj))))
+    rhs1 = ((const * MW[0] * sum1(nu_[:, 0] * (Eta * rj))))
+    rhs2 = ((const * MW[1] * sum1(nu_[:, 1] * (Eta * rj))))
     rhs3 = ((const * MW[2] * sum1(nu_[:, 2] * (Eta * rj))))
     rhs4 = ((const * MW[3] * sum1(nu_[:, 3] * (Eta * rj))))
     rhs5 = ((const * MW[4] * sum1(nu_[:, 4] * (Eta * rj))))
@@ -211,10 +209,8 @@ def create_reactor_steady(N,L):
     alg = vertcat()
     #alg = vertcat( dPdz-rhs7 )
     x = vertcat(wCH4, wCO, wCO2, wH2, wH2O)#, T)
-    z = vertcat()
-    u = vertcat()
-    # # Define the DAE system correctly
-    # dae = Function('reactor_dae', [xdot,x,z,u], [ode,alg])  # Differential stat
+    z = None
+    u = None
 
     model = AcadosModel()
     model.f_impl_expr = ode
@@ -224,6 +220,5 @@ def create_reactor_steady(N,L):
     model.u = u
     model.z = z
     #model.p = p
-
     model.name = model_name
-    return model 
+    return model

@@ -28,16 +28,16 @@
  * POSSIBILITY OF SUCH DAMAGE.;
  */
 
-#ifndef ACADOS_SIM_simplePDE_H_
-#define ACADOS_SIM_simplePDE_H_
+#ifndef ACADOS_SIM_reactor_model_SS_H_
+#define ACADOS_SIM_reactor_model_SS_H_
 
 #include "acados_c/sim_interface.h"
 #include "acados_c/external_function_interface.h"
 
-#define SIMPLEPDE_NX     13
-#define SIMPLEPDE_NZ     0
-#define SIMPLEPDE_NU     0
-#define SIMPLEPDE_NP     0
+#define REACTOR_MODEL_SS_NX     5
+#define REACTOR_MODEL_SS_NZ     0
+#define REACTOR_MODEL_SS_NU     0
+#define REACTOR_MODEL_SS_NP     0
 
 #ifdef __cplusplus
 extern "C" {
@@ -45,7 +45,7 @@ extern "C" {
 
 
 // ** capsule for solver data **
-typedef struct simplePDE_sim_solver_capsule
+typedef struct reactor_model_SS_sim_solver_capsule
 {
     // acados objects
     sim_in *acados_sim_in;
@@ -75,28 +75,28 @@ typedef struct simplePDE_sim_solver_capsule
     external_function_param_casadi * sim_gnsf_f_lo_jac_x1_x1dot_u_z;
     external_function_param_casadi * sim_gnsf_get_matrices_fun;
 
-} simplePDE_sim_solver_capsule;
+} reactor_model_SS_sim_solver_capsule;
 
 
-ACADOS_SYMBOL_EXPORT int simplePDE_acados_sim_create(simplePDE_sim_solver_capsule *capsule);
-ACADOS_SYMBOL_EXPORT int simplePDE_acados_sim_solve(simplePDE_sim_solver_capsule *capsule);
-ACADOS_SYMBOL_EXPORT void simplePDE_acados_sim_batch_solve(simplePDE_sim_solver_capsule **capsules, int N_batch);
-ACADOS_SYMBOL_EXPORT int simplePDE_acados_sim_free(simplePDE_sim_solver_capsule *capsule);
-ACADOS_SYMBOL_EXPORT int simplePDE_acados_sim_update_params(simplePDE_sim_solver_capsule *capsule, double *value, int np);
+ACADOS_SYMBOL_EXPORT int reactor_model_SS_acados_sim_create(reactor_model_SS_sim_solver_capsule *capsule);
+ACADOS_SYMBOL_EXPORT int reactor_model_SS_acados_sim_solve(reactor_model_SS_sim_solver_capsule *capsule);
+ACADOS_SYMBOL_EXPORT void reactor_model_SS_acados_sim_batch_solve(reactor_model_SS_sim_solver_capsule **capsules, int N_batch);
+ACADOS_SYMBOL_EXPORT int reactor_model_SS_acados_sim_free(reactor_model_SS_sim_solver_capsule *capsule);
+ACADOS_SYMBOL_EXPORT int reactor_model_SS_acados_sim_update_params(reactor_model_SS_sim_solver_capsule *capsule, double *value, int np);
 
-ACADOS_SYMBOL_EXPORT sim_config * simplePDE_acados_get_sim_config(simplePDE_sim_solver_capsule *capsule);
-ACADOS_SYMBOL_EXPORT sim_in * simplePDE_acados_get_sim_in(simplePDE_sim_solver_capsule *capsule);
-ACADOS_SYMBOL_EXPORT sim_out * simplePDE_acados_get_sim_out(simplePDE_sim_solver_capsule *capsule);
-ACADOS_SYMBOL_EXPORT void * simplePDE_acados_get_sim_dims(simplePDE_sim_solver_capsule *capsule);
-ACADOS_SYMBOL_EXPORT sim_opts * simplePDE_acados_get_sim_opts(simplePDE_sim_solver_capsule *capsule);
-ACADOS_SYMBOL_EXPORT sim_solver * simplePDE_acados_get_sim_solver(simplePDE_sim_solver_capsule *capsule);
+ACADOS_SYMBOL_EXPORT sim_config * reactor_model_SS_acados_get_sim_config(reactor_model_SS_sim_solver_capsule *capsule);
+ACADOS_SYMBOL_EXPORT sim_in * reactor_model_SS_acados_get_sim_in(reactor_model_SS_sim_solver_capsule *capsule);
+ACADOS_SYMBOL_EXPORT sim_out * reactor_model_SS_acados_get_sim_out(reactor_model_SS_sim_solver_capsule *capsule);
+ACADOS_SYMBOL_EXPORT void * reactor_model_SS_acados_get_sim_dims(reactor_model_SS_sim_solver_capsule *capsule);
+ACADOS_SYMBOL_EXPORT sim_opts * reactor_model_SS_acados_get_sim_opts(reactor_model_SS_sim_solver_capsule *capsule);
+ACADOS_SYMBOL_EXPORT sim_solver * reactor_model_SS_acados_get_sim_solver(reactor_model_SS_sim_solver_capsule *capsule);
 
 
-ACADOS_SYMBOL_EXPORT simplePDE_sim_solver_capsule * simplePDE_acados_sim_solver_create_capsule(void);
-ACADOS_SYMBOL_EXPORT int simplePDE_acados_sim_solver_free_capsule(simplePDE_sim_solver_capsule *capsule);
+ACADOS_SYMBOL_EXPORT reactor_model_SS_sim_solver_capsule * reactor_model_SS_acados_sim_solver_create_capsule(void);
+ACADOS_SYMBOL_EXPORT int reactor_model_SS_acados_sim_solver_free_capsule(reactor_model_SS_sim_solver_capsule *capsule);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif  // ACADOS_SIM_simplePDE_H_
+#endif  // ACADOS_SIM_reactor_model_SS_H_

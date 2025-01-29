@@ -36,19 +36,19 @@
 #include "acados/utils/print.h"
 #include "acados/utils/math.h"
 #include "acados_c/sim_interface.h"
-#include "acados_sim_solver_simplePDE.h"
+#include "acados_sim_solver_reactor_model_SS.h"
 
-#define NX     SIMPLEPDE_NX
-#define NZ     SIMPLEPDE_NZ
-#define NU     SIMPLEPDE_NU
-#define NP     SIMPLEPDE_NP
+#define NX     REACTOR_MODEL_SS_NX
+#define NZ     REACTOR_MODEL_SS_NZ
+#define NU     REACTOR_MODEL_SS_NU
+#define NP     REACTOR_MODEL_SS_NP
 
 
 int main()
 {
     int status = 0;
-    simplePDE_sim_solver_capsule *capsule = simplePDE_acados_sim_solver_create_capsule();
-    status = simplePDE_acados_sim_create(capsule);
+    reactor_model_SS_sim_solver_capsule *capsule = reactor_model_SS_acados_sim_solver_create_capsule();
+    status = reactor_model_SS_acados_sim_create(capsule);
 
     if (status)
     {
@@ -56,10 +56,10 @@ int main()
         exit(1);
     }
 
-    sim_config *acados_sim_config = simplePDE_acados_get_sim_config(capsule);
-    sim_in *acados_sim_in = simplePDE_acados_get_sim_in(capsule);
-    sim_out *acados_sim_out = simplePDE_acados_get_sim_out(capsule);
-    void *acados_sim_dims = simplePDE_acados_get_sim_dims(capsule);
+    sim_config *acados_sim_config = reactor_model_SS_acados_get_sim_config(capsule);
+    sim_in *acados_sim_in = reactor_model_SS_acados_get_sim_in(capsule);
+    sim_out *acados_sim_out = reactor_model_SS_acados_get_sim_out(capsule);
+    void *acados_sim_dims = reactor_model_SS_acados_get_sim_dims(capsule);
 
     // initial condition
     double x_current[NX];
@@ -68,14 +68,6 @@ int main()
     x_current[2] = 0.0;
     x_current[3] = 0.0;
     x_current[4] = 0.0;
-    x_current[5] = 0.0;
-    x_current[6] = 0.0;
-    x_current[7] = 0.0;
-    x_current[8] = 0.0;
-    x_current[9] = 0.0;
-    x_current[10] = 0.0;
-    x_current[11] = 0.0;
-    x_current[12] = 0.0;
 
   
     printf("main_sim: initial state not defined, should be in lbx_0, using zero vector.");
@@ -100,7 +92,7 @@ int main()
             acados_sim_in, "u", u0);
 
         // solve
-        status = simplePDE_acados_sim_solve(capsule);
+        status = reactor_model_SS_acados_sim_solve(capsule);
         if (status != ACADOS_SUCCESS)
         {
             printf("acados_solve() failed with status %d.\n", status);
@@ -136,12 +128,12 @@ int main()
     printf("\nPerformed %d simulation steps with acados integrator successfully.\n\n", n_sim_steps);
 
     // free solver
-    status = simplePDE_acados_sim_free(capsule);
+    status = reactor_model_SS_acados_sim_free(capsule);
     if (status) {
-        printf("simplePDE_acados_sim_free() returned status %d. \n", status);
+        printf("reactor_model_SS_acados_sim_free() returned status %d. \n", status);
     }
 
-    simplePDE_acados_sim_solver_free_capsule(capsule);
+    reactor_model_SS_acados_sim_solver_free_capsule(capsule);
 
     return status;
 }

@@ -75,11 +75,11 @@ def f(t, x, u, ux, uxx, fval):
     nu_expanded = np.repeat(nu[:, :, np.newaxis], rj.shape[1], axis=2)
     #nu_expanded = np.repeat(nu[:, :, np.newaxis], rj.shape, axis=2)  # Shape becomes (3, 5, 200)
 
-    fval[0] = -vz*ux[0] + Aint*vz/F3 * np.sum(np.multiply(nu_expanded[:, 0,:], np.multiply(Eta, rj)))
-    fval[1] = -vz*ux[1] + Aint*vz/F3 * np.sum(np.multiply(nu_expanded[:, 1,:], np.multiply(Eta, rj)))
-    fval[2] = -vz*ux[2] + Aint*vz/F3 * np.sum(np.multiply(nu_expanded[:, 2,:], np.multiply(Eta, rj)))
-    fval[3] = -vz*ux[3] + Aint*vz/F3 * np.sum(np.multiply(nu_expanded[:, 3,:], np.multiply(Eta, rj)))
-    fval[4] = -vz*ux[4] + Aint*vz/F3 * np.sum(np.multiply(nu_expanded[:, 4,:], np.multiply(Eta, rj)))
+    fval[0] = -vz*ux[0] + Aint*vz/Fin[0] * np.sum(np.multiply(nu_expanded[:, 0,:], np.multiply(Eta, rj)))
+    fval[1] = -vz*ux[1] + Aint*vz/Fin[1] * np.sum(np.multiply(nu_expanded[:, 1,:], np.multiply(Eta, rj)))
+    fval[2] = -vz*ux[2] + Aint*vz/Fin[2] * np.sum(np.multiply(nu_expanded[:, 2,:], np.multiply(Eta, rj)))
+    fval[3] = -vz*ux[3] + Aint*vz/Fin[3] * np.sum(np.multiply(nu_expanded[:, 3,:], np.multiply(Eta, rj)))
+    fval[4] = -vz*ux[4] + Aint*vz/Fin[4] * np.sum(np.multiply(nu_expanded[:, 4,:], np.multiply(Eta, rj)))
     return fval
 
 # Function defining the left spatial boundary condition.

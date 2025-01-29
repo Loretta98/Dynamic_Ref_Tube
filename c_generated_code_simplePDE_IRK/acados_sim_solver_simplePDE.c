@@ -73,7 +73,7 @@ int simplePDE_acados_sim_create(simplePDE_sim_solver_capsule * capsule)
     const int np = SIMPLEPDE_NP;
     bool tmp_bool;
 
-    double Tsim = 0.2;
+    double Tsim = 0.13333333333333333;
 
     external_function_opts ext_fun_opts;
     external_function_opts_set_to_default(&ext_fun_opts);
@@ -193,8 +193,8 @@ int simplePDE_acados_sim_create(simplePDE_sim_solver_capsule * capsule)
 
     /* initialize input */
     // x
-    double x0[10];
-    for (int ii = 0; ii < 10; ii++)
+    double x0[13];
+    for (int ii = 0; ii < 13; ii++)
         x0[ii] = 0.0;
 
     sim_in_set(simplePDE_sim_config, simplePDE_sim_dims,
@@ -210,11 +210,11 @@ int simplePDE_acados_sim_create(simplePDE_sim_solver_capsule * capsule)
                simplePDE_sim_in, "u", u0);
 
     // S_forw
-    double S_forw[100];
-    for (int ii = 0; ii < 100; ii++)
+    double S_forw[169];
+    for (int ii = 0; ii < 169; ii++)
         S_forw[ii] = 0.0;
-    for (int ii = 0; ii < 10; ii++)
-        S_forw[ii + ii * 10 ] = 1.0;
+    for (int ii = 0; ii < 13; ii++)
+        S_forw[ii + ii * 13 ] = 1.0;
 
 
     sim_in_set(simplePDE_sim_config, simplePDE_sim_dims,

@@ -50,12 +50,12 @@ extern "C" {
   #endif
 #endif
 
-static const casadi_int casadi_s0[14] = {10, 1, 0, 10, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+static const casadi_int casadi_s0[17] = {13, 1, 0, 13, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
 static const casadi_int casadi_s1[4] = {0, 1, 0, 0};
 static const casadi_int casadi_s2[5] = {1, 1, 0, 1, 0};
-static const casadi_int casadi_s3[23] = {20, 20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+static const casadi_int casadi_s3[29] = {26, 26, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
-/* simplePDE_impl_dae_hess:(i0[10],i1[10],i2[0],i3[0],i4[10],i5,i6[0])->(o0[20x20,0nz]) */
+/* simplePDE_impl_dae_hess:(i0[13],i1[13],i2[0],i3[0],i4[13],i5,i6[0])->(o0[26x26,0nz]) */
 static int casadi_f0(const casadi_real** arg, casadi_real** res, casadi_int* iw, casadi_real* w, int mem) {
   return 0;
 }

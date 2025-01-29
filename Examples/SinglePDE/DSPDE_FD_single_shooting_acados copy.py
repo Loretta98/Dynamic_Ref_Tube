@@ -72,35 +72,28 @@ u0 = np.sin(np.pi * x)
 # Symbolic variables
 t = SX.sym('t')          # Time
 u = SX.sym('u', N)       # Variable along spatial domain --> N number of equations 
+du_dt = SX.sym('du_dt',N)
+dudt = SX.zeros(N)  # Initialize time derivative array
 
-# PDE -> ODEs using finite differences
-dudt = SX.sym('dudt',N)  # Initialize time derivative array
-dudx2 = SX.zeros(N)
-dudx = SX.zeros(N)
 # Interior points (finite difference for second derivative) --> implicit expression 
-# Interior points: Finite difference for second derivative
 for i in range(1, N - 1):
-    dudx2[i] = (u[i+1] - 2*u[i] + u[i-1]) / dx**2
-# Assemble the system
-pi_squared = np.pi**2
+    dudt[i] = (u[i+1] - 2*u[i] + u[i-1]) / dx**2
+
 # Boundary conditions
-dudx2[0] = 0  # Dirichlet at x = 0
-dudx2[-1] = ((u[-1]- u[-2])/dx + np.pi * exp(-t)) # Neumann at x = 1
+dudt[0] = 0  # Dirichlet BC at x = 0: u(0, t) = 0
+dudt[-1] = (u[-1] - u[-2]) / dx + np.pi * exp(-t)  # Neumann BC at x = 1: pi*exp(-t) + du/dx(1, t) = 0
 
-ode = vertcat((dudt - dudx2 / pi_squared))#+ dudx))
-
-# Define explicit dynamics
-f_expl = dudx2 / pi_squared# + dudx 
+ode = vertcat((dudt/np.pi**2))#+ dudx))
 
 z = None
 u_ = None
 model_name = "simplePDE"
 
 model = AcadosModel()
-model.f_impl_expr = ode
-model.f_expl_expr = f_expl
+model.f_impl_expr = ode - du_dt
+model.f_expl_expr = ode
 model.x = u
-model.xdot = dudt
+model.xdot = du_dt
 model.u = u_
 model.z = z
 model.t = t
@@ -132,13 +125,15 @@ solution_trajectory = []  # Store all time steps
 t0 = 0  # Start time
 solution_trajectory = np.zeros((N, len(time_points)))  # Preallocate for efficiency
 
-# Multiple shooting
-for idx, t0 in enumerate(time_points):
-    result = test_integrator(x0=u0, p=t0)  # Solve at the current time
-    u0 = result['xf']  # Update initial condition for the next step
-    u0[0] = 0  # Apply Dirichlet BC at x = 0
-    u0[-1] = u0[-2] - dx * np.pi * np.exp(-t0)  # Apply Neumann BC at x = 1
-    solution_trajectory[:, idx] = u0.full().flatten()  # Store the solution
+result = test_integrator(x0=u0,p=t0)
+solution_trajectory = result['xf'].full()
+# # Multiple shooting
+# for idx, t0 in enumerate(time_points):
+#     result = test_integrator(x0=u0, p=t0)  # Solve at the current time
+#     u0 = result['xf']  # Update initial condition for the next step
+#     u0[0] = 0  # Apply Dirichlet BC at x = 0
+#     u0[-1] = u0[-2] - dx * np.pi * np.exp(-t0)  # Apply Neumann BC at x = 1
+#     solution_trajectory[:, idx] = u0.full().flatten()  # Store the solution
 
 # Convert solution trajectory to a numpy array for easier plotting
 solution_trajectory = np.array(solution_trajectory).T  # Transpose for better visualization
