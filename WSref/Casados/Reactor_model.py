@@ -6,7 +6,7 @@ from acados_template import AcadosModel
 from Properties import Kinetics
 
 def create_reactor_dynamics(N,L): 
-    model_name = "reactor_model"
+    model_name = "reactor_model_dynamic"
     ncomp=5
     # Constants
     Aint = 0.1
@@ -27,7 +27,7 @@ def create_reactor_dynamics(N,L):
     dTdt = SX.sym('dTdt',N)              # Time energy equation 
     
     # State variables
-    t = SX.sym('t')
+    #t = SX.sym('t')
     wCH4 = SX.sym('wCH4', N)
     wCO = SX.sym('wCO', N)
     wCO2 = SX.sym('wCO2', N)
@@ -77,10 +77,10 @@ def create_reactor_dynamics(N,L):
     VolFlow_R1 = m_gas / RhoGas                                                     # Volumetric flow per tube [m3/s]
     u_ = (F3) * R * T / (Aint*Ppa)                                                   # Superficial Gas velocity if the tube was empy (Coke at al. 2007)
     vz  = VolFlow_R1 / (Aint * Epsilon)                                               # Gas velocity in the tube [m/s]
-    rj,kr = Kinetics_N(T,R, Pi, RhoC, Epsilon,N)
+    #rj,kr = Kinetics_N(T,R, Pi, RhoC, Epsilon,N)
     Dh_reaction = SX.zeros(3,N) + [225054923.824, -35038982.22,190015941.6]
     Eta = SX.zeros(3,N) + 0.1
-
+    rj = SX.zeros(3,N)
     # RHS expressions
     rhs1 = -vz * dCH4dz + (vz.T * (const * MW[0] * sum1(nu_[:, 0] * (Eta * rj)))).T
     rhs2 = -vz * dCOdz + (vz.T * (const * MW[1] * sum1(nu_[:, 1] * (Eta * rj)))).T
@@ -99,7 +99,7 @@ def create_reactor_dynamics(N,L):
     z = vertcat()
     u = vertcat()
     # Define the DAE system correctly
-    dae = Function('reactor_dae', [xdot,x,z,u], [ode,alg])  # Differential stat
+    #dae = Function('reactor_dae', [xdot,x,z,u], [ode,alg])  # Differential stat
 
     model = AcadosModel()
     model.f_impl_expr = ode
@@ -109,7 +109,6 @@ def create_reactor_dynamics(N,L):
     model.u = u
     model.z = z
     #model.p = p
-
     model.name = model_name
     return model 
 

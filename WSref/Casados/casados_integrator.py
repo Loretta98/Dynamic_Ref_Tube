@@ -68,7 +68,7 @@ class CasadosIntegrator(Callback):
                 AcadosSimSolver.build(
                     acados_sim.code_export_directory, with_cython=True
                 )
-            self.acados_integrator = AcadosSimSolver.create_cython_solver(json_file)
+            self.acados_integrator =AcadosSimSolver.create_cython_solver(json_file)
         else:
             self.acados_integrator = AcadosSimSolver(acados_sim)
 

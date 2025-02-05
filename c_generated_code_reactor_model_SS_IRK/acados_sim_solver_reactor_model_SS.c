@@ -73,7 +73,7 @@ int reactor_model_SS_acados_sim_create(reactor_model_SS_sim_solver_capsule * cap
     const int np = REACTOR_MODEL_SS_NP;
     bool tmp_bool;
 
-    double Tsim = 0.02;
+    double Tsim = 0.008;
 
     external_function_opts ext_fun_opts;
     external_function_opts_set_to_default(&ext_fun_opts);
@@ -137,9 +137,9 @@ int reactor_model_SS_acados_sim_create(reactor_model_SS_sim_solver_capsule * cap
     // sim opts
     sim_opts *reactor_model_SS_sim_opts = sim_opts_create(reactor_model_SS_sim_config, reactor_model_SS_sim_dims);
     capsule->acados_sim_opts = reactor_model_SS_sim_opts;
-    int tmp_int = 1000;
+    int tmp_int = 300;
     sim_opts_set(reactor_model_SS_sim_config, reactor_model_SS_sim_opts, "newton_iter", &tmp_int);
-    double tmp_double = 0.0000000019999999999999993;
+    double tmp_double = 0.00005;
     sim_opts_set(reactor_model_SS_sim_config, reactor_model_SS_sim_opts, "newton_tol", &tmp_double);
     sim_collocation_type collocation_type = GAUSS_RADAU_IIA;
     sim_opts_set(reactor_model_SS_sim_config, reactor_model_SS_sim_opts, "collocation_type", &collocation_type);
@@ -147,7 +147,7 @@ int reactor_model_SS_acados_sim_create(reactor_model_SS_sim_solver_capsule * cap
 
     tmp_int = 9;
     sim_opts_set(reactor_model_SS_sim_config, reactor_model_SS_sim_opts, "num_stages", &tmp_int);
-    tmp_int = 500;
+    tmp_int = 200;
     sim_opts_set(reactor_model_SS_sim_config, reactor_model_SS_sim_opts, "num_steps", &tmp_int);
 
     // options that are not available to AcadosOcpSolver

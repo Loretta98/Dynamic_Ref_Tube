@@ -36,19 +36,19 @@
 #include "acados/utils/print.h"
 #include "acados/utils/math.h"
 #include "acados_c/sim_interface.h"
-#include "acados_sim_solver_reactor_model.h"
+#include "acados_sim_solver_reactor_model_dynamic.h"
 
-#define NX     REACTOR_MODEL_NX
-#define NZ     REACTOR_MODEL_NZ
-#define NU     REACTOR_MODEL_NU
-#define NP     REACTOR_MODEL_NP
+#define NX     REACTOR_MODEL_DYNAMIC_NX
+#define NZ     REACTOR_MODEL_DYNAMIC_NZ
+#define NU     REACTOR_MODEL_DYNAMIC_NU
+#define NP     REACTOR_MODEL_DYNAMIC_NP
 
 
 int main()
 {
     int status = 0;
-    reactor_model_sim_solver_capsule *capsule = reactor_model_acados_sim_solver_create_capsule();
-    status = reactor_model_acados_sim_create(capsule);
+    reactor_model_dynamic_sim_solver_capsule *capsule = reactor_model_dynamic_acados_sim_solver_create_capsule();
+    status = reactor_model_dynamic_acados_sim_create(capsule);
 
     if (status)
     {
@@ -56,10 +56,10 @@ int main()
         exit(1);
     }
 
-    sim_config *acados_sim_config = reactor_model_acados_get_sim_config(capsule);
-    sim_in *acados_sim_in = reactor_model_acados_get_sim_in(capsule);
-    sim_out *acados_sim_out = reactor_model_acados_get_sim_out(capsule);
-    void *acados_sim_dims = reactor_model_acados_get_sim_dims(capsule);
+    sim_config *acados_sim_config = reactor_model_dynamic_acados_get_sim_config(capsule);
+    sim_in *acados_sim_in = reactor_model_dynamic_acados_get_sim_in(capsule);
+    sim_out *acados_sim_out = reactor_model_dynamic_acados_get_sim_out(capsule);
+    void *acados_sim_dims = reactor_model_dynamic_acados_get_sim_dims(capsule);
 
     // initial condition
     double x_current[NX];
@@ -363,6 +363,186 @@ int main()
     x_current[297] = 0.0;
     x_current[298] = 0.0;
     x_current[299] = 0.0;
+    x_current[300] = 0.0;
+    x_current[301] = 0.0;
+    x_current[302] = 0.0;
+    x_current[303] = 0.0;
+    x_current[304] = 0.0;
+    x_current[305] = 0.0;
+    x_current[306] = 0.0;
+    x_current[307] = 0.0;
+    x_current[308] = 0.0;
+    x_current[309] = 0.0;
+    x_current[310] = 0.0;
+    x_current[311] = 0.0;
+    x_current[312] = 0.0;
+    x_current[313] = 0.0;
+    x_current[314] = 0.0;
+    x_current[315] = 0.0;
+    x_current[316] = 0.0;
+    x_current[317] = 0.0;
+    x_current[318] = 0.0;
+    x_current[319] = 0.0;
+    x_current[320] = 0.0;
+    x_current[321] = 0.0;
+    x_current[322] = 0.0;
+    x_current[323] = 0.0;
+    x_current[324] = 0.0;
+    x_current[325] = 0.0;
+    x_current[326] = 0.0;
+    x_current[327] = 0.0;
+    x_current[328] = 0.0;
+    x_current[329] = 0.0;
+    x_current[330] = 0.0;
+    x_current[331] = 0.0;
+    x_current[332] = 0.0;
+    x_current[333] = 0.0;
+    x_current[334] = 0.0;
+    x_current[335] = 0.0;
+    x_current[336] = 0.0;
+    x_current[337] = 0.0;
+    x_current[338] = 0.0;
+    x_current[339] = 0.0;
+    x_current[340] = 0.0;
+    x_current[341] = 0.0;
+    x_current[342] = 0.0;
+    x_current[343] = 0.0;
+    x_current[344] = 0.0;
+    x_current[345] = 0.0;
+    x_current[346] = 0.0;
+    x_current[347] = 0.0;
+    x_current[348] = 0.0;
+    x_current[349] = 0.0;
+    x_current[350] = 0.0;
+    x_current[351] = 0.0;
+    x_current[352] = 0.0;
+    x_current[353] = 0.0;
+    x_current[354] = 0.0;
+    x_current[355] = 0.0;
+    x_current[356] = 0.0;
+    x_current[357] = 0.0;
+    x_current[358] = 0.0;
+    x_current[359] = 0.0;
+    x_current[360] = 0.0;
+    x_current[361] = 0.0;
+    x_current[362] = 0.0;
+    x_current[363] = 0.0;
+    x_current[364] = 0.0;
+    x_current[365] = 0.0;
+    x_current[366] = 0.0;
+    x_current[367] = 0.0;
+    x_current[368] = 0.0;
+    x_current[369] = 0.0;
+    x_current[370] = 0.0;
+    x_current[371] = 0.0;
+    x_current[372] = 0.0;
+    x_current[373] = 0.0;
+    x_current[374] = 0.0;
+    x_current[375] = 0.0;
+    x_current[376] = 0.0;
+    x_current[377] = 0.0;
+    x_current[378] = 0.0;
+    x_current[379] = 0.0;
+    x_current[380] = 0.0;
+    x_current[381] = 0.0;
+    x_current[382] = 0.0;
+    x_current[383] = 0.0;
+    x_current[384] = 0.0;
+    x_current[385] = 0.0;
+    x_current[386] = 0.0;
+    x_current[387] = 0.0;
+    x_current[388] = 0.0;
+    x_current[389] = 0.0;
+    x_current[390] = 0.0;
+    x_current[391] = 0.0;
+    x_current[392] = 0.0;
+    x_current[393] = 0.0;
+    x_current[394] = 0.0;
+    x_current[395] = 0.0;
+    x_current[396] = 0.0;
+    x_current[397] = 0.0;
+    x_current[398] = 0.0;
+    x_current[399] = 0.0;
+    x_current[400] = 0.0;
+    x_current[401] = 0.0;
+    x_current[402] = 0.0;
+    x_current[403] = 0.0;
+    x_current[404] = 0.0;
+    x_current[405] = 0.0;
+    x_current[406] = 0.0;
+    x_current[407] = 0.0;
+    x_current[408] = 0.0;
+    x_current[409] = 0.0;
+    x_current[410] = 0.0;
+    x_current[411] = 0.0;
+    x_current[412] = 0.0;
+    x_current[413] = 0.0;
+    x_current[414] = 0.0;
+    x_current[415] = 0.0;
+    x_current[416] = 0.0;
+    x_current[417] = 0.0;
+    x_current[418] = 0.0;
+    x_current[419] = 0.0;
+    x_current[420] = 0.0;
+    x_current[421] = 0.0;
+    x_current[422] = 0.0;
+    x_current[423] = 0.0;
+    x_current[424] = 0.0;
+    x_current[425] = 0.0;
+    x_current[426] = 0.0;
+    x_current[427] = 0.0;
+    x_current[428] = 0.0;
+    x_current[429] = 0.0;
+    x_current[430] = 0.0;
+    x_current[431] = 0.0;
+    x_current[432] = 0.0;
+    x_current[433] = 0.0;
+    x_current[434] = 0.0;
+    x_current[435] = 0.0;
+    x_current[436] = 0.0;
+    x_current[437] = 0.0;
+    x_current[438] = 0.0;
+    x_current[439] = 0.0;
+    x_current[440] = 0.0;
+    x_current[441] = 0.0;
+    x_current[442] = 0.0;
+    x_current[443] = 0.0;
+    x_current[444] = 0.0;
+    x_current[445] = 0.0;
+    x_current[446] = 0.0;
+    x_current[447] = 0.0;
+    x_current[448] = 0.0;
+    x_current[449] = 0.0;
+    x_current[450] = 0.0;
+    x_current[451] = 0.0;
+    x_current[452] = 0.0;
+    x_current[453] = 0.0;
+    x_current[454] = 0.0;
+    x_current[455] = 0.0;
+    x_current[456] = 0.0;
+    x_current[457] = 0.0;
+    x_current[458] = 0.0;
+    x_current[459] = 0.0;
+    x_current[460] = 0.0;
+    x_current[461] = 0.0;
+    x_current[462] = 0.0;
+    x_current[463] = 0.0;
+    x_current[464] = 0.0;
+    x_current[465] = 0.0;
+    x_current[466] = 0.0;
+    x_current[467] = 0.0;
+    x_current[468] = 0.0;
+    x_current[469] = 0.0;
+    x_current[470] = 0.0;
+    x_current[471] = 0.0;
+    x_current[472] = 0.0;
+    x_current[473] = 0.0;
+    x_current[474] = 0.0;
+    x_current[475] = 0.0;
+    x_current[476] = 0.0;
+    x_current[477] = 0.0;
+    x_current[478] = 0.0;
+    x_current[479] = 0.0;
 
   
     printf("main_sim: initial state not defined, should be in lbx_0, using zero vector.");
@@ -387,7 +567,7 @@ int main()
             acados_sim_in, "u", u0);
 
         // solve
-        status = reactor_model_acados_sim_solve(capsule);
+        status = reactor_model_dynamic_acados_sim_solve(capsule);
         if (status != ACADOS_SUCCESS)
         {
             printf("acados_solve() failed with status %d.\n", status);
@@ -423,12 +603,12 @@ int main()
     printf("\nPerformed %d simulation steps with acados integrator successfully.\n\n", n_sim_steps);
 
     // free solver
-    status = reactor_model_acados_sim_free(capsule);
+    status = reactor_model_dynamic_acados_sim_free(capsule);
     if (status) {
-        printf("reactor_model_acados_sim_free() returned status %d. \n", status);
+        printf("reactor_model_dynamic_acados_sim_free() returned status %d. \n", status);
     }
 
-    reactor_model_acados_sim_solver_free_capsule(capsule);
+    reactor_model_dynamic_acados_sim_solver_free_capsule(capsule);
 
     return status;
 }

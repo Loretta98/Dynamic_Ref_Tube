@@ -73,7 +73,7 @@ int reactor_model_acados_sim_create(reactor_model_sim_solver_capsule * capsule)
     const int np = REACTOR_MODEL_NP;
     bool tmp_bool;
 
-    double Tsim = 0.2;
+    double Tsim = 0.15;
 
     external_function_opts ext_fun_opts;
     external_function_opts_set_to_default(&ext_fun_opts);
@@ -137,17 +137,17 @@ int reactor_model_acados_sim_create(reactor_model_sim_solver_capsule * capsule)
     // sim opts
     sim_opts *reactor_model_sim_opts = sim_opts_create(reactor_model_sim_config, reactor_model_sim_dims);
     capsule->acados_sim_opts = reactor_model_sim_opts;
-    int tmp_int = 10;
+    int tmp_int = 300;
     sim_opts_set(reactor_model_sim_config, reactor_model_sim_opts, "newton_iter", &tmp_int);
-    double tmp_double = 0.0000003333333333333333;
+    double tmp_double = 0.00005;
     sim_opts_set(reactor_model_sim_config, reactor_model_sim_opts, "newton_tol", &tmp_double);
     sim_collocation_type collocation_type = GAUSS_RADAU_IIA;
     sim_opts_set(reactor_model_sim_config, reactor_model_sim_opts, "collocation_type", &collocation_type);
 
 
-    tmp_int = 6;
+    tmp_int = 9;
     sim_opts_set(reactor_model_sim_config, reactor_model_sim_opts, "num_stages", &tmp_int);
-    tmp_int = 3;
+    tmp_int = 200;
     sim_opts_set(reactor_model_sim_config, reactor_model_sim_opts, "num_steps", &tmp_int);
 
     // options that are not available to AcadosOcpSolver
@@ -193,8 +193,8 @@ int reactor_model_acados_sim_create(reactor_model_sim_solver_capsule * capsule)
 
     /* initialize input */
     // x
-    double x0[60];
-    for (int ii = 0; ii < 60; ii++)
+    double x0[300];
+    for (int ii = 0; ii < 300; ii++)
         x0[ii] = 0.0;
 
     sim_in_set(reactor_model_sim_config, reactor_model_sim_dims,
@@ -210,11 +210,11 @@ int reactor_model_acados_sim_create(reactor_model_sim_solver_capsule * capsule)
                reactor_model_sim_in, "u", u0);
 
     // S_forw
-    double S_forw[3600];
-    for (int ii = 0; ii < 3600; ii++)
+    double S_forw[90000];
+    for (int ii = 0; ii < 90000; ii++)
         S_forw[ii] = 0.0;
-    for (int ii = 0; ii < 60; ii++)
-        S_forw[ii + ii * 60 ] = 1.0;
+    for (int ii = 0; ii < 300; ii++)
+        S_forw[ii + ii * 300 ] = 1.0;
 
 
     sim_in_set(reactor_model_sim_config, reactor_model_sim_dims,
